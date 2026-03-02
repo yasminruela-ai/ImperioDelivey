@@ -22,12 +22,18 @@ Criar um aplicativo que permita:
 ##  Tecnologias Utilizadas
 - Figma (protótipo)
 - GitHub (versionamento)
+- Flutter (FrontEnd)
+- NodeJs + Express(Backend)
+- Firebase (Database)
 
 ##  Backlog Inicial (Épicos)
 
--  Sistema de Login e Cadastro
--  Cadastro e gerenciamento do cardápio
--  Sistema de pedidos
--  Acompanhamento do status do pedido
--  Painel administrativo para controle de pedidos
--  
+-  Estrutura e Infraestrutura
+-  Autenticação e Usuário
+-  Localização GPS
+-  Catálogo de Produtos
+-  Carrinho e Pedidos
+-  Notificações de Push
+-  Histórico e Perfil
+-  Inteligência Artificial
+-  Observabilidade e Qualidade

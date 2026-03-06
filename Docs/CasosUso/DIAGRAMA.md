@@ -4,9 +4,13 @@ left to right direction
 actor Usuario
 
 rectangle Sistema {
- (Cadastrar Usuário)
+ (Visualizar Catálogo)
+ (Adicionar ao Carrinho)
+ (Finalizar Pedido)
 }
 
-Usuario --> (Cadastrar Usuário)
+Usuario --> (Visualizar Catálogo)
+Usuario --> (Adicionar ao Carrinho)
+Usuario --> (Finalizar Pedido)
 
 @enduml

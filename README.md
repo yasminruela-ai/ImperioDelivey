@@ -26,14 +26,4 @@ Criar um aplicativo que permita:
 - NodeJs + Express(Backend)
 - Firebase (Database)
 
-##  Backlog Inicial (Épicos)
 
--  Estrutura e Infraestrutura
--  Autenticação e Usuário
--  Localização GPS
--  Catálogo de Produtos
--  Carrinho e Pedidos
--  Notificações de Push
--  Histórico e Perfil
--  Inteligência Artificial
--  Observabilidade e Qualidade

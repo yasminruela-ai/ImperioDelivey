@@ -33,7 +33,7 @@ Descrição: O sistema deve permitir a confirmação e envio de pedidos.
 Descrição: O sistema deve registrar pedidos no banco de dados.
 
 ##RF12
-Descrição: O sistema deve permitir acompanhar o status do pedido.
+Descrição: O sistema deve permitir acompanhar o status doS pedidos.
 
 ##RF13
 Descrição: O sistema deve exibir o histórico de pedidos do usuário.

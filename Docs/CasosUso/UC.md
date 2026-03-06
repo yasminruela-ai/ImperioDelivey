@@ -1,4 +1,4 @@
-Caso de Uso: Realizar Pedido
+Caso de Uso: Realizar Pedido.
 Ator: Usuário
 Objetivo: Permitir que o usuário selecione produtos e finalize um pedido.
 

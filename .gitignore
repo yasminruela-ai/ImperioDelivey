@@ -1,1 +1,7 @@
-BackEnd/node_modules
+node_modules
+
+.env
+
+tmp
+
+firebase-key.json

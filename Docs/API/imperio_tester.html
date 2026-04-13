@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ImperioDelivery — API Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Unbounded:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#080b10; --surface:#0d1117; --card:#111820; --border:#1e2a38;
+  --accent:#f97316; --accent2:#fbbf24; --green:#10b981; --red:#f43f5e;
+  --blue:#38bdf8; --purple:#a78bfa; --text:#e2eaf4; --muted:#4a6080;
+  --mono:'JetBrains Mono',monospace; --display:'Unbounded',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(249,115,22,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(249,115,22,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+header{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;flex-wrap:wrap;}
+.logo{font-family:var(--display);font-size:12px;font-weight:900;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
+.logo span{color:var(--muted);}
+.url-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0 12px;height:32px;flex:1;min-width:160px;}
+.url-bar label{font-size:9px;color:var(--muted);white-space:nowrap;}
+.url-bar input{background:transparent;border:none;outline:none;color:var(--accent2);font-family:var(--mono);font-size:11px;flex:1;min-width:0;}
+.tok-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0 12px;height:32px;max-width:300px;flex:1;}
+.tok-bar label{font-size:9px;color:var(--purple);white-space:nowrap;}
+.tok-bar input{background:transparent;border:none;outline:none;color:var(--purple);font-family:var(--mono);font-size:11px;flex:1;min-width:0;}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+.tdot.on{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+.layout{position:relative;z-index:1;display:grid;grid-template-columns:210px 1fr 360px;height:calc(100vh - 56px);}
+
+nav{border-right:1px solid var(--border);overflow-y:auto;padding:12px 0;}
+.ng{padding:10px 14px 3px;font-size:9px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.ni{display:flex;align-items:center;gap:7px;padding:6px 14px;cursor:pointer;border-left:2px solid transparent;transition:all .15s;font-size:10px;color:var(--muted);}
+.ni:hover{color:var(--text);background:rgba(249,115,22,.05);border-left-color:var(--border);}
+.ni.active{color:var(--accent);border-left-color:var(--accent);background:rgba(249,115,22,.08);}
+.ni .p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.mb{font-size:8px;font-weight:700;padding:2px 4px;border-radius:3px;min-width:34px;text-align:center;flex-shrink:0;}
+.GET{background:rgba(16,185,129,.15);color:var(--green);}
+.POST{background:rgba(249,115,22,.15);color:var(--accent);}
+.PUT{background:rgba(251,191,36,.15);color:var(--accent2);}
+.DELETE{background:rgba(244,63,94,.15);color:var(--red);}
+
+.center{overflow-y:auto;padding:24px 28px;}
+.ep{display:none;animation:fi .2s ease;}
+.ep.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.et{display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap;}
+.et h2{font-family:var(--display);font-size:15px;font-weight:700;}
+.es{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.ap{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.pub{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.25);}
+.tok{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25);}
+.mgr{background:rgba(251,191,36,.1);color:var(--accent2);border:1px solid rgba(251,191,36,.25);}
+
+.fg{margin-bottom:16px;}
+.fl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.req{color:var(--red);font-size:9px;margin-left:4px;}
+.opt{color:var(--muted);font-size:9px;margin-left:4px;}
+input[type=text],input[type=number],textarea,select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:12px;padding:9px 11px;outline:none;transition:border-color .15s;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:90px;line-height:1.6;}
+select option{background:var(--card);}
+.fiw{position:relative;background:var(--surface);border:1px dashed var(--border);border-radius:6px;padding:14px;text-align:center;cursor:pointer;transition:border-color .15s;}
+.fiw:hover{border-color:var(--accent);}
+.fiw input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.fiw p{font-size:10px;color:var(--muted);}
+.fn{color:var(--accent);margin-top:3px;font-size:10px;}
+
+.sbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--accent);border:none;border-radius:8px;color:#000;font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .2s;margin-top:6px;}
+.sbtn:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 20px rgba(249,115,22,.3);}
+.sbtn:active{transform:translateY(0);}
+.sbtn.loading{background:var(--muted);pointer-events:none;}
+.sbtn.danger{background:var(--red);}
+.sbtn.danger:hover{background:#fb7185;}
+
+.warn{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px;color:var(--red);}
+
+.rp{border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.rh{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.rh h3{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.sb{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;}
+.sd{width:7px;height:7px;border-radius:50%;}
+.rm{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-shrink:0;}
+.mi{font-size:10px;color:var(--muted);}
+.mi span{color:var(--text);font-weight:600;}
+.rb{flex:1;overflow-y:auto;padding:14px 18px;}
+.jv{font-family:var(--mono);font-size:11px;line-height:1.8;white-space:pre-wrap;word-break:break-all;}
+.jk{color:var(--blue);}
+.js{color:var(--green);}
+.jn{color:var(--accent2);}
+.jb{color:var(--purple);}
+.jnu{color:var(--red);}
+.rempty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:10px;}
+.rempty .ic{font-size:32px;opacity:.3;}
+.rempty p{font-size:11px;}
+.cpbtn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .15s;}
+.cpbtn:hover{color:var(--text);border-color:var(--accent);}
+.log{border-top:1px solid var(--border);padding:8px 16px;background:var(--surface);font-size:10px;color:var(--muted);flex-shrink:0;max-height:110px;overflow-y:auto;}
+.le{padding:2px 0;display:flex;gap:8px;}
+.lt{color:var(--muted);flex-shrink:0;}
+.lok{color:var(--green);} .lerr{color:var(--red);} .linf{color:var(--blue);}
+
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;text-align:center;}
+.welcome .big{font-family:var(--display);font-size:26px;font-weight:900;color:var(--accent);}
+.welcome .sub{font-size:11px;color:var(--muted);line-height:1.8;max-width:360px;}
+.welcome .hint{font-size:10px;color:var(--border);}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">IMPERIO<span>/</span>TESTER</div>
+  <div class="url-bar">
+    <label>BASE URL</label>
+    <input id="baseUrl" type="text" value="http://localhost:2580"/>
+  </div>
+  <div class="tok-bar">
+    <label>🔑 TOKEN</label>
+    <input id="globalToken" type="text" placeholder="Preenchido após o login..."/>
+    <div class="tdot" id="tdot"></div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- NAV -->
+  <nav>
+    <div class="ng">👤 Usuário</div>
+    <div class="ni" data-ep="register">  <span class="mb POST">POST</span><span class="p">/register</span></div>
+    <div class="ni" data-ep="login">     <span class="mb POST">POST</span><span class="p">/login</span></div>
+    <div class="ni" data-ep="func">      <span class="mb POST">POST</span><span class="p">/funcionario</span></div>
+    <div class="ni" data-ep="userupd">   <span class="mb PUT">PUT</span><span class="p">/user</span></div>
+    <div class="ni" data-ep="userdel">   <span class="mb DELETE">DEL</span><span class="p">/user</span></div>
+    <div class="ng">📦 Produtos</div>
+    <div class="ni" data-ep="prodall">   <span class="mb GET">GET</span><span class="p">/produto</span></div>
+    <div class="ni" data-ep="prodone">   <span class="mb GET">GET</span><span class="p">/produto/:id</span></div>
+    <div class="ni" data-ep="prodnew">   <span class="mb POST">POST</span><span class="p">/produto</span></div>
+    <div class="ni" data-ep="produpd">   <span class="mb PUT">PUT</span><span class="p">/produto/:id</span></div>
+    <div class="ni" data-ep="proddel">   <span class="mb DELETE">DEL</span><span class="p">/produto/:id</span></div>
+    <div class="ng">🛒 Carrinho</div>
+    <div class="ni" data-ep="cget">      <span class="mb GET">GET</span><span class="p">/carrinho</span></div>
+    <div class="ni" data-ep="csave">     <span class="mb POST">POST</span><span class="p">/carrinho</span></div>
+    <div class="ni" data-ep="cadd">      <span class="mb POST">POST</span><span class="p">/carrinho/item</span></div>
+    <div class="ni" data-ep="crem">      <span class="mb DELETE">DEL</span><span class="p">/carrinho/item/:id</span></div>
+    <div class="ni" data-ep="cclr">      <span class="mb DELETE">DEL</span><span class="p">/carrinho</span></div>
+    <div class="ng">🧾 Pedidos</div>
+    <div class="ni" data-ep="pfin">      <span class="mb POST">POST</span><span class="p">/pedido</span></div>
+    <div class="ni" data-ep="pme">       <span class="mb GET">GET</span><span class="p">/pedido/me</span></div>
+    <div class="ni" data-ep="pone">      <span class="mb GET">GET</span><span class="p">/pedido/:id</span></div>
+    <div class="ni" data-ep="pall">      <span class="mb GET">GET</span><span class="p">/pedidos</span></div>
+    <div class="ni" data-ep="pstatus">   <span class="mb PUT">PUT</span><span class="p">/pedido/:id/status</span></div>
+  </nav>
+
+  <!-- CENTER -->
+  <div class="center">
+    <div id="welcome" class="welcome">
+      <div class="big">🔥 API Tester</div>
+      <div class="sub">Selecione um endpoint no menu lateral. Todos os campos já vêm pré-preenchidos com dados de exemplo.</div>
+      <div class="hint">← escolha uma rota para começar</div>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="ep" id="ep-register">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/register</h2><span class="ap pub">🟢 Público</span></div>
+      <p class="es">Cria uma nova conta de cliente. O campo tipo é definido automaticamente como cliente.</p>
+      <div class="fg"><div class="fl">nome<span class="req">*</span></div><input type="text" id="rg-nome" value="João da Silva"/></div>
+      <div class="fg"><div class="fl">email<span class="req">*</span></div><input type="text" id="rg-email" value="joao@email.com"/></div>
+      <div class="fg"><div class="fl">password<span class="req">*</span></div><input type="text" id="rg-pass" value="senha123"/></div>
+      <div class="fg"><div class="fl">telefone<span class="opt">opcional</span></div><input type="text" id="rg-tel" value="(11) 91234-5678"/></div>
+      <div class="fg"><div class="fl">endereco<span class="opt">opcional</span></div><input type="text" id="rg-end" value="Rua das Flores, 100"/></div>
+      <button class="sbtn" id="btn-register">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="ep" id="ep-login">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/login</h2><span class="ap pub">🟢 Público</span></div>
+      <p class="es">Autentica o usuário. Após o login, o token é preenchido automaticamente no campo TOKEN do cabeçalho.</p>
+      <div class="fg"><div class="fl">email<span class="req">*</span></div><input type="text" id="ln-email" value="joao@email.com"/></div>
+      <div class="fg"><div class="fl">password<span class="req">*</span></div><input type="text" id="ln-pass" value="senha123"/></div>
+      <button class="sbtn" id="btn-login">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- FUNCIONARIO -->
+    <div class="ep" id="ep-func">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/funcionario</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Cria uma conta de funcionário. Requer token de gerente no cabeçalho.</p>
+      <div class="fg"><div class="fl">nome<span class="req">*</span></div><input type="text" id="fn-nome" value="Maria Funcionária"/></div>
+      <div class="fg"><div class="fl">email<span class="req">*</span></div><input type="text" id="fn-email" value="maria@imperio.com"/></div>
+      <div class="fg"><div class="fl">password<span class="req">*</span></div><input type="text" id="fn-pass" value="func456"/></div>
+      <div class="fg"><div class="fl">telefone<span class="opt">opcional</span></div><input type="text" id="fn-tel" value="(11) 98765-4321"/></div>
+      <div class="fg"><div class="fl">endereco<span class="opt">opcional</span></div><input type="text" id="fn-end" value="Av. Central, 200"/></div>
+      <button class="sbtn" id="btn-func">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- USER UPDATE -->
+    <div class="ep" id="ep-userupd">
+      <div class="et"><span class="mb PUT" style="font-size:11px;padding:3px 8px">PUT</span><h2>/user</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Atualiza os dados do usuário autenticado. O uid é extraído do token automaticamente.</p>
+      <div class="fg"><div class="fl">nome</div><input type="text" id="uu-nome" value="João Atualizado"/></div>
+      <div class="fg"><div class="fl">email</div><input type="text" id="uu-email" value="joao_novo@email.com"/></div>
+      <div class="fg"><div class="fl">password</div><input type="text" id="uu-pass" value="novaSenha789"/></div>
+      <div class="fg"><div class="fl">telefone</div><input type="text" id="uu-tel" value="(11) 90000-1111"/></div>
+      <div class="fg"><div class="fl">endereco</div><input type="text" id="uu-end" value="Rua Nova, 50"/></div>
+      <button class="sbtn" id="btn-userupd">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- USER DELETE -->
+    <div class="ep" id="ep-userdel">
+      <div class="et"><span class="mb DELETE" style="font-size:11px;padding:3px 8px">DELETE</span><h2>/user</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Remove permanentemente a conta do usuário autenticado.</p>
+      <div class="warn">⚠ Esta ação irá deletar permanentemente a conta do usuário cujo token está no cabeçalho. Irreversível!</div>
+      <button class="sbtn danger" id="btn-userdel">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- GET ALL PRODUTOS -->
+    <div class="ep" id="ep-prodall">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/produto</h2><span class="ap pub">🟢 Público</span></div>
+      <p class="es">Retorna todos os produtos cadastrados. Não requer autenticação.</p>
+      <button class="sbtn" id="btn-prodall">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- GET PRODUTO -->
+    <div class="ep" id="ep-prodone">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/produto/:id</h2><span class="ap pub">🟢 Público</span></div>
+      <p class="es">Retorna um produto específico pelo seu ID.</p>
+      <div class="fg"><div class="fl">id do produto<span class="req">*</span></div><input type="text" id="po-id" value="prod_001"/></div>
+      <button class="sbtn" id="btn-prodone">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- NEW PRODUTO -->
+    <div class="ep" id="ep-prodnew">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/produto</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Cria um novo produto. Envia como multipart/form-data. Upload de imagem é opcional.</p>
+      <div class="fg"><div class="fl">nome<span class="req">*</span></div><input type="text" id="pn-nome" value="Pizza Calabresa"/></div>
+      <div class="fg"><div class="fl">descricao</div><input type="text" id="pn-desc" value="Pizza com calabresa e cebola caramelizada"/></div>
+      <div class="fg"><div class="fl">valor<span class="req">*</span></div><input type="number" id="pn-valor" value="45.90" step="0.01"/></div>
+      <div class="fg"><div class="fl">categoria</div><input type="text" id="pn-cat" value="Pizzas"/></div>
+      <div class="fg">
+        <div class="fl">imagem<span class="opt">opcional</span></div>
+        <div class="fiw"><input type="file" id="pn-img" accept="image/*"/><p>Clique para selecionar imagem</p><div class="fn" id="pn-fn"></div></div>
+      </div>
+      <button class="sbtn" id="btn-prodnew">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- UPDATE PRODUTO -->
+    <div class="ep" id="ep-produpd">
+      <div class="et"><span class="mb PUT" style="font-size:11px;padding:3px 8px">PUT</span><h2>/produto/:id</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Atualiza dados de um produto. Pode enviar nova imagem via multipart/form-data.</p>
+      <div class="fg"><div class="fl">id do produto<span class="req">*</span></div><input type="text" id="pu-id" value="prod_001"/></div>
+      <div class="fg"><div class="fl">nome</div><input type="text" id="pu-nome" value="Pizza Margherita Especial"/></div>
+      <div class="fg"><div class="fl">descricao</div><input type="text" id="pu-desc" value="Com borda recheada de catupiry"/></div>
+      <div class="fg"><div class="fl">valor</div><input type="number" id="pu-valor" value="49.90" step="0.01"/></div>
+      <div class="fg"><div class="fl">categoria</div><input type="text" id="pu-cat" value="Pizzas"/></div>
+      <div class="fg">
+        <div class="fl">imagem<span class="opt">opcional</span></div>
+        <div class="fiw"><input type="file" id="pu-img" accept="image/*"/><p>Selecionar nova imagem</p><div class="fn" id="pu-fn"></div></div>
+      </div>
+      <button class="sbtn" id="btn-produpd">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- DELETE PRODUTO -->
+    <div class="ep" id="ep-proddel">
+      <div class="et"><span class="mb DELETE" style="font-size:11px;padding:3px 8px">DELETE</span><h2>/produto/:id</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Remove um produto do sistema permanentemente.</p>
+      <div class="fg"><div class="fl">id do produto<span class="req">*</span></div><input type="text" id="pd-id" value="prod_001"/></div>
+      <button class="sbtn danger" id="btn-proddel">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- GET CARRINHO -->
+    <div class="ep" id="ep-cget">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/carrinho</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Retorna o carrinho atual do usuário autenticado com todos os itens.</p>
+      <button class="sbtn" id="btn-cget">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- SAVE CARRINHO -->
+    <div class="ep" id="ep-csave">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/carrinho</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Salva (ou sobrescreve completamente) o carrinho do usuário.</p>
+      <div class="fg"><div class="fl">tipo</div>
+        <select id="cs-tipo"><option value="delivery">delivery</option><option value="retirada">retirada</option></select>
+      </div>
+      <div class="fg"><div class="fl">itens (JSON Array)<span class="req">*</span></div>
+        <textarea id="cs-itens">[
+  {
+    "produtoId": "prod_001",
+    "nome": "Pizza Margherita",
+    "descricao": "Clássica italiana",
+    "valor": 42.90,
+    "imagem": "",
+    "categoria": "Pizzas",
+    "quantidade": 2
+  }
+]</textarea>
+      </div>
+      <button class="sbtn" id="btn-csave">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- ADD ITEM -->
+    <div class="ep" id="ep-cadd">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/carrinho/item</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Adiciona um único produto ao carrinho. Se já existir, incrementa a quantidade.</p>
+      <div class="fg"><div class="fl">produtoId<span class="req">*</span></div><input type="text" id="ca-pid" value="prod_001"/></div>
+      <div class="fg"><div class="fl">nome<span class="req">*</span></div><input type="text" id="ca-nome" value="Pizza Margherita"/></div>
+      <div class="fg"><div class="fl">descricao</div><input type="text" id="ca-desc" value="Clássica italiana"/></div>
+      <div class="fg"><div class="fl">valor<span class="req">*</span></div><input type="number" id="ca-valor" value="42.90" step="0.01"/></div>
+      <div class="fg"><div class="fl">categoria</div><input type="text" id="ca-cat" value="Pizzas"/></div>
+      <div class="fg"><div class="fl">quantidade<span class="req">*</span></div><input type="number" id="ca-qty" value="1" min="1"/></div>
+      <button class="sbtn" id="btn-cadd">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- REMOVE ITEM -->
+    <div class="ep" id="ep-crem">
+      <div class="et"><span class="mb DELETE" style="font-size:11px;padding:3px 8px">DELETE</span><h2>/carrinho/item/:produtoId</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Remove um produto específico do carrinho pelo ID do produto.</p>
+      <div class="fg"><div class="fl">produtoId<span class="req">*</span></div><input type="text" id="cr-id" value="prod_001"/></div>
+      <button class="sbtn danger" id="btn-crem">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- CLEAR CARRINHO -->
+    <div class="ep" id="ep-cclr">
+      <div class="et"><span class="mb DELETE" style="font-size:11px;padding:3px 8px">DELETE</span><h2>/carrinho</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Remove todos os itens do carrinho do usuário autenticado.</p>
+      <button class="sbtn danger" id="btn-cclr">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- FINALIZAR PEDIDO -->
+    <div class="ep" id="ep-pfin">
+      <div class="et"><span class="mb POST" style="font-size:11px;padding:3px 8px">POST</span><h2>/pedido</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Cria um pedido com base nos itens do carrinho atual. O carrinho é limpo automaticamente após o pedido.</p>
+      <div class="fg"><div class="fl">enderecoEntrega<span class="req">*</span></div><input type="text" id="pf-end" value="Rua das Flores, 100 — Apto 12"/></div>
+      <div class="fg"><div class="fl">formaPagamento<span class="req">*</span></div>
+        <select id="pf-pag"><option value="pix">pix</option><option value="dinheiro">dinheiro</option><option value="cartao_credito">cartao_credito</option><option value="cartao_debito">cartao_debito</option></select>
+      </div>
+      <div class="fg"><div class="fl">observacao<span class="opt">opcional</span></div><input type="text" id="pf-obs" value="Sem cebola, por favor"/></div>
+      <button class="sbtn" id="btn-pfin">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- MEUS PEDIDOS -->
+    <div class="ep" id="ep-pme">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/pedido/me</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Retorna todos os pedidos do usuário autenticado.</p>
+      <button class="sbtn" id="btn-pme">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- GET PEDIDO -->
+    <div class="ep" id="ep-pone">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/pedido/:id</h2><span class="ap tok">🔵 Autenticado</span></div>
+      <p class="es">Retorna os detalhes completos de um pedido específico.</p>
+      <div class="fg"><div class="fl">id do pedido<span class="req">*</span></div><input type="text" id="po2-id" value="ped_001"/></div>
+      <button class="sbtn" id="btn-pone">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- ALL PEDIDOS -->
+    <div class="ep" id="ep-pall">
+      <div class="et"><span class="mb GET" style="font-size:11px;padding:3px 8px">GET</span><h2>/pedidos</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Retorna todos os pedidos de todos os usuários. Requer permissão de gerente.</p>
+      <button class="sbtn" id="btn-pall">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+    <!-- UPDATE STATUS -->
+    <div class="ep" id="ep-pstatus">
+      <div class="et"><span class="mb PUT" style="font-size:11px;padding:3px 8px">PUT</span><h2>/pedido/:id/status</h2><span class="ap mgr">👑 Gerente</span></div>
+      <p class="es">Atualiza o status de um pedido. Requer permissão de gerente.</p>
+      <div class="fg"><div class="fl">id do pedido<span class="req">*</span></div><input type="text" id="ps-id" value="ped_001"/></div>
+      <div class="fg"><div class="fl">status<span class="req">*</span></div>
+        <select id="ps-status"><option value="pendente">pendente</option><option value="em_preparo">em_preparo</option><option value="saiu_para_entrega">saiu_para_entrega</option><option value="entregue">entregue</option><option value="cancelado">cancelado</option></select>
+      </div>
+      <button class="sbtn" id="btn-pstatus">▶ ENVIAR REQUISIÇÃO</button>
+    </div>
+
+  </div><!-- /center -->
+
+  <!-- RESPONSE -->
+  <div class="rp">
+    <div class="rh">
+      <h3>Response</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="cpbtn" id="copyBtn">📋 Copiar</button>
+        <div class="sb" id="statusBadge" style="display:none"><div class="sd" id="statusDot"></div><span id="statusTxt"></span></div>
+      </div>
+    </div>
+    <div class="rm" id="respMeta" style="display:none">
+      <div class="mi">Tempo: <span id="metaTime">—</span></div>
+      <div class="mi">Método: <span id="metaMethod">—</span></div>
+      <div class="mi">Rota: <span id="metaRoute">—</span></div>
+    </div>
+    <div class="rb" id="respBody">
+      <div class="rempty"><div class="ic">◎</div><p>Aguardando requisição...</p></div>
+    </div>
+    <div class="log" id="logBar">
+      <div style="font-size:9px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px;">Log</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Helpers ──
+const $ = id => document.getElementById(id);
+const val = id => ($( id) ? $(id).value : '');
+let lastResp = '';
+
+// ── Token indicator ──
+$('globalToken').addEventListener('input', function() {
+  $(  'tdot').classList.toggle('on', this.value.length > 10);
+});
+
+// ── Nav ──
+document.querySelectorAll('.ni').forEach(function(item) {
+  item.addEventListener('click', function() {
+    var ep = this.dataset.ep;
+    document.querySelectorAll('.ep').forEach(function(c){ c.classList.remove('active'); });
+    document.querySelectorAll('.ni').forEach(function(n){ n.classList.remove('active'); });
+    $('welcome').style.display = 'none';
+    var card = $('ep-' + ep);
+    if (card) card.classList.add('active');
+    this.classList.add('active');
+  });
+});
+
+// ── File name display ──
+document.querySelectorAll('input[type=file]').forEach(function(inp) {
+  inp.addEventListener('change', function() {
+    var fnId = this.id.replace('-img', '-fn');
+    var fnEl = $(fnId);
+    if (fnEl) fnEl.textContent = this.files[0] ? this.files[0].name : '';
+  });
+});
+
+// ── Log ──
+function log(msg, type) {
+  var bar = $('logBar');
+  var time = new Date().toLocaleTimeString('pt-BR');
+  var entry = document.createElement('div');
+  entry.className = 'le';
+  entry.innerHTML = '<span class="lt">' + time + '</span><span class="l' + (type||'inf') + '">' + msg + '</span>';
+  bar.appendChild(entry);
+  bar.scrollTop = bar.scrollHeight;
+}
+
+// ── Colorize JSON ──
+function colorize(json) {
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(m) {
+      if (/^"/.test(m)) return /:$/.test(m) ? '<span class="jk">'+m+'</span>' : '<span class="js">'+m+'</span>';
+      if (/true|false/.test(m)) return '<span class="jb">'+m+'</span>';
+      if (/null/.test(m)) return '<span class="jnu">'+m+'</span>';
+      return '<span class="jn">'+m+'</span>';
+    });
+}
+
+// ── Render response ──
+function renderOk(data, status, time, method, route) {
+  var isOk = status >= 200 && status < 300;
+  $('statusBadge').style.display = 'flex';
+  $('respMeta').style.display = 'flex';
+  $('metaTime').textContent = time + 'ms';
+  $('metaMethod').textContent = method;
+  $('metaRoute').textContent = route;
+  $('statusDot').style.background = isOk ? 'var(--green)' : 'var(--red)';
+  $('statusDot').style.boxShadow = isOk ? '0 0 6px var(--green)' : '0 0 6px var(--red)';
+  $('statusTxt').textContent = status;
+  $('statusTxt').style.color = isOk ? 'var(--green)' : 'var(--red)';
+  var json = JSON.stringify(data, null, 2);
+  lastResp = json;
+  $('respBody').innerHTML = '<div class="jv">' + colorize(json) + '</div>';
+  log(method + ' ' + route + ' → ' + status + ' (' + time + 'ms)', isOk ? 'ok' : 'err');
+}
+
+function renderErr(msg, method, route) {
+  $('statusBadge').style.display = 'none';
+  $('respMeta').style.display = 'none';
+  $('respBody').innerHTML = '<div style="color:var(--red);font-size:12px;line-height:1.8"><strong>⚠ Erro de conexão</strong><br/><br/>' + msg + '<br/><br/><span style="color:var(--muted)">Verifique se a API está rodando em ' + val('baseUrl') + '</span></div>';
+  log(method + ' ' + route + ' → ERRO', 'err');
+}
+
+// ── Copy response ──
+$('copyBtn').addEventListener('click', function() {
+  if (!lastResp) return;
+  navigator.clipboard.writeText(lastResp).then(function(){ log('Response copiado!','inf'); });
+});
+
+// ── Btn loading ──
+function setLoading(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle('loading', on);
+  btn.textContent = on ? '⏳ Enviando...' : '▶ ENVIAR REQUISIÇÃO';
+}
+
+// ── Core fetch ──
+async function req(method, path, body, auth, isForm) {
+  var url = val('baseUrl') + path;
+  var headers = {};
+  if (auth) headers['Authorization'] = 'Bearer ' + val('globalToken');
+  if (!isForm) headers['Content-Type'] = 'application/json';
+  var opts = { method: method, headers: headers };
+  if (body && method !== 'GET') opts.body = isForm ? body : JSON.stringify(body);
+  var t0 = Date.now();
+  log(method + ' ' + path, 'inf');
+  try {
+    var res = await fetch(url, opts);
+    var data;
+    try { data = await res.json(); } catch(e) { data = { raw: 'resposta não-JSON' }; }
+    renderOk(data, res.status, Date.now()-t0, method, path);
+    return data;
+  } catch(e) {
+    renderErr(e.message, method, path);
+  }
+}
+
+// ── Button wiring ──
+function wire(id, fn) {
+  var btn = $(id);
+  if (!btn) return;
+  btn.addEventListener('click', async function() {
+    setLoading(btn, true);
+    await fn();
+    setLoading(btn, false);
+  });
+}
+
+// REGISTER
+wire('btn-register', function() {
+  return req('POST', '/register', { nome:val('rg-nome'), email:val('rg-email'), password:val('rg-pass'), telefone:val('rg-tel'), endereco:val('rg-end') });
+});
+
+// LOGIN
+wire('btn-login', async function() {
+  var data = await req('POST', '/login', { email:val('ln-email'), password:val('ln-pass') });
+  if (data) {
+    var token = (data.data && (data.data.token || data.data.idToken)) || data.token;
+    if (token) {
+      $('globalToken').value = token;
+      $('tdot').classList.add('on');
+      log('✅ Token preenchido automaticamente!', 'ok');
+    }
+  }
+});
+
+// FUNCIONARIO
+wire('btn-func', function() {
+  return req('POST', '/funcionario', { nome:val('fn-nome'), email:val('fn-email'), password:val('fn-pass'), telefone:val('fn-tel'), endereco:val('fn-end') }, true);
+});
+
+// USER UPDATE
+wire('btn-userupd', function() {
+  return req('PUT', '/user', { nome:val('uu-nome'), email:val('uu-email'), password:val('uu-pass'), telefone:val('uu-tel'), endereco:val('uu-end') }, true);
+});
+
+// USER DELETE
+wire('btn-userdel', function() {
+  return req('DELETE', '/user', null, true);
+});
+
+// GET ALL PRODUTOS
+wire('btn-prodall', function() {
+  return req('GET', '/produto');
+});
+
+// GET PRODUTO
+wire('btn-prodone', function() {
+  return req('GET', '/produto/' + val('po-id'));
+});
+
+// NEW PRODUTO (multipart)
+wire('btn-prodnew', function() {
+  var fd = new FormData();
+  fd.append('nome', val('pn-nome'));
+  fd.append('descricao', val('pn-desc'));
+  fd.append('valor', val('pn-valor'));
+  fd.append('categoria', val('pn-cat'));
+  var imgEl = $('pn-img');
+  if (imgEl && imgEl.files[0]) fd.append('imagem', imgEl.files[0]);
+  return req('POST', '/produto', fd, true, true);
+});
+
+// UPDATE PRODUTO (multipart)
+wire('btn-produpd', function() {
+  var fd = new FormData();
+  fd.append('nome', val('pu-nome'));
+  fd.append('descricao', val('pu-desc'));
+  fd.append('valor', val('pu-valor'));
+  fd.append('categoria', val('pu-cat'));
+  var imgEl = $('pu-img');
+  if (imgEl && imgEl.files[0]) fd.append('imagem', imgEl.files[0]);
+  return req('PUT', '/produto/' + val('pu-id'), fd, true, true);
+});
+
+// DELETE PRODUTO
+wire('btn-proddel', function() {
+  return req('DELETE', '/produto/' + val('pd-id'), null, true);
+});
+
+// GET CARRINHO
+wire('btn-cget', function() {
+  return req('GET', '/carrinho', null, true);
+});
+
+// SAVE CARRINHO
+wire('btn-csave', function() {
+  var itens;
+  try { itens = JSON.parse(val('cs-itens')); }
+  catch(e) { alert('JSON de itens inválido!\n' + e.message); return Promise.resolve(); }
+  return req('POST', '/carrinho', { tipo: val('cs-tipo'), itens: itens }, true);
+});
+
+// ADD ITEM
+wire('btn-cadd', function() {
+  return req('POST', '/carrinho/item', {
+    produtoId: val('ca-pid'), nome: val('ca-nome'), descricao: val('ca-desc'),
+    valor: parseFloat(val('ca-valor')), categoria: val('ca-cat'),
+    quantidade: parseInt(val('ca-qty'))
+  }, true);
+});
+
+// REMOVE ITEM
+wire('btn-crem', function() {
+  return req('DELETE', '/carrinho/item/' + val('cr-id'), null, true);
+});
+
+// CLEAR CARRINHO
+wire('btn-cclr', function() {
+  return req('DELETE', '/carrinho', null, true);
+});
+
+// FINALIZAR PEDIDO
+wire('btn-pfin', function() {
+  return req('POST', '/pedido', { enderecoEntrega: val('pf-end'), formaPagamento: val('pf-pag'), observacao: val('pf-obs') }, true);
+});
+
+// MEUS PEDIDOS
+wire('btn-pme', function() {
+  return req('GET', '/pedido/me', null, true);
+});
+
+// GET PEDIDO
+wire('btn-pone', function() {
+  return req('GET', '/pedido/' + val('po2-id'), null, true);
+});
+
+// ALL PEDIDOS
+wire('btn-pall', function() {
+  return req('GET', '/pedidos', null, true);
+});
+
+// UPDATE STATUS
+wire('btn-pstatus', function() {
+  return req('PUT', '/pedido/' + val('ps-id') + '/status', { status: val('ps-status') }, true);
+});
+</script>
+</body>
+</html>

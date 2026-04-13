@@ -1,32 +1,65 @@
 const users = require("../Models/User");
 
-class LoginController {
-  
-  async newUser(req, res) {
-    
+class UserController {
+
+  async register(req, res) {
     let user = {
       nome: req.body.nome,
       telefone: req.body.telefone,
       email: req.body.email,
-      tipo: "cliente",
-      endereco: {
-        pais: req.body.endereco.pais,
-        estado: req.body.endereco.estado,
-        cidade: req.body.endereco.cidade,
-        bairro: req.body.endereco.bairro,
-        rua: req.body.endereco.rua,
-        numero: req.body.endereco.numero,
-        cep: req.body.endereco.cep,
-      },
+      password: req.body.password,
+      tipo: req.tipo,
+      endereco: req.body.endereco,
     };
 
-    let result = await users.new(user);
+    const result = await users.new(user);
 
     result.validate
-      ? res.status(201).json({ success: true, message: "Conta criada!" })
-      : res.status(404).json({ success: false, message: result.error });
+      ? res.status(201).json({ success: true, data: result.data })
+      : res.status(400).json({ success: false, message: result.error });
+  }
 
+  async login(req, res) {
+    const user = {
+      email: req.body.email,
+      password: req.body.password,
+    };
+
+    const result = await users.auth(user);
+
+    result.validate
+      ? res.status(200).json({ success: true, data: result.data })
+      : res.status(401).json({ success: false, message: result.error });
+  }
+
+  async update(req, res) {
+    const uid = req.user.uid;
+
+    const user = {
+      nome: req.body.nome,
+      telefone: req.body.telefone,
+      email: req.body.email,
+      password: req.body.password,
+      tipo: req.body.tipo,
+      endereco: req.body.endereco,
+    };
+
+    const result = await users.update(uid, user);
+
+    result.validate
+      ? res.status(200).json({ success: true, data: result.data })
+      : res.status(400).json({ success: false, message: result.error });
+  }
+
+  async delete(req, res) {
+    const uid = req.user.uid;
+
+    const result = await users.delete(uid);
+
+    result.validate
+      ? res.status(200).json({ success: true, data: result.data })
+      : res.status(400).json({ success: false, message: result.error });
   }
 }
 
-module.exports = new LoginController();
+module.exports = new UserController();

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "829986149574",
+    "project_id": "imperios-delivery",
+    "storage_bucket": "imperios-delivery.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:829986149574:android:0f98e145f8aa5826a533c7",
+        "android_client_info": {
+          "package_name": "com.example.imperios"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "829986149574-i2b5sd239bf1aof7j7b3oe6d9hed3mm9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMo6_rynnYc3dhEeYXhbLpQcS693UPfsk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "829986149574-i2b5sd239bf1aof7j7b3oe6d9hed3mm9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

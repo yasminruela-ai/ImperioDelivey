@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xxd \"C:\\\\Users\\\\games\\\\Desktop\\\\imperios - merge\\\\ImperioDelivey-IA\\\\BackEnd\\\\env\")",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('./src/config/firebase.js'\\); console.log\\('Firebase OK'\\)\")",
+      "Bash(node server.js)",
+      "Bash(node *)",
+      "Bash(ipconfig)",
+      "Bash(powershell *)",
+      "Bash(curl -s http://localhost:2580/)",
+      "Bash(curl -s http://localhost:3000/)"
+    ]
+  }
+}

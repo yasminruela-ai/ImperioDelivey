@@ -1,0 +1,32 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente e credenciais
+.env
+BackEnd/env
+
+# Chave privada do Firebase Admin SDK (NUNCA commitar)
+firebase-key.json
+**/firebase-key.json
+**/*service-account*.json
+
+# Upload temporário do multer
+tmp/
+BackEnd/tmp/
+
+# Build do Flutter/Android
+FrontEnd/android/.gradle/
+FrontEnd/android/app/build/
+FrontEnd/build/
+FrontEnd/.dart_tool/
+FrontEnd/.flutter-plugins
+FrontEnd/.flutter-plugins-dependencies
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

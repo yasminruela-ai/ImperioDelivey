@@ -26,6 +26,9 @@ FrontEnd/.flutter-plugins-dependencies
 *.log
 npm-debug.log*
 
+# Claude Code
+.claude/
+
 # Sistema
 .DS_Store
 Thumbs.db

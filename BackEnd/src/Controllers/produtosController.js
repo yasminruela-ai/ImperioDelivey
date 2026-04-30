@@ -1,5 +1,6 @@
 const produtos = require("../Models/Produto");
 const { uploadImage } = require("../config/cloudinary");
+const { invalidarCache } = require("../ia");
 
 class ProdutoController {
   async newProduto(req, res) {
@@ -27,6 +28,7 @@ class ProdutoController {
         });
       }
 
+      invalidarCache();
       return res.status(201).json({
         success: true,
         message: "Produto criado com sucesso!",
@@ -141,6 +143,7 @@ class ProdutoController {
         });
       }
 
+      invalidarCache();
       return res.status(200).json({
         success: true,
         message: "Produto deletado com sucesso!",

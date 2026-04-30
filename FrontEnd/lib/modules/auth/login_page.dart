@@ -18,8 +18,9 @@ class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fade;
+  late Animation<Offset> _slide;
 
-  final _emailController = TextEditingController();
+  final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
 
@@ -28,9 +29,13 @@ class _LoginPageState extends State<LoginPage>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 900),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _fade  = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -43,7 +48,7 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _login() async {
-    final email = _emailController.text.trim();
+    final email    = _emailController.text.trim();
     final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
@@ -52,9 +57,7 @@ class _LoginPageState extends State<LoginPage>
     }
 
     setState(() => _loading = true);
-
     final error = await AuthService.login(email, password);
-
     if (!mounted) return;
     setState(() => _loading = false);
 
@@ -63,9 +66,7 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
-    // Carrega carrinho do backend após login
     await context.read<CartController>().loadFromBackend();
-
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -75,73 +76,192 @@ class _LoginPageState extends State<LoginPage>
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppTheme.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FadeTransition(
-        opacity: _fade,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/logo.png', height: 80),
-              const SizedBox(height: 16),
-              const Text(
-                'Imperios Delivery',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+      body: Stack(
+        children: [
+          // ── Fundo com gradiente ──────────────────────────────────────────
+          Container(
+            height: MediaQuery.of(context).size.height * 0.42,
+            decoration: const BoxDecoration(
+              gradient: AppTheme.heroGradient,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
               ),
-              const SizedBox(height: 32),
-              AuthTextField(
-                label: 'Email',
-                icon: Icons.email_outlined,
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              AuthTextField(
-                label: 'Senha',
-                icon: Icons.lock_outline,
-                obscure: true,
-                controller: _passwordController,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Entrar',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+            ),
+          ),
+
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fade,
+              child: SlideTransition(
+                position: _slide,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 56),
+
+                      // ── Logo ──────────────────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          shape: BoxShape.circle,
                         ),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          height: 80,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Imperios Delivery',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Peça rápido, receba com sabor',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.82),
+                          fontSize: 14,
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // ── Card do formulário ────────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: AppTheme.floatShadow,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bem-vindo de volta',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Faça login para continuar',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 28),
+
+                            AuthTextField(
+                              label: 'E-mail',
+                              icon: Icons.email_outlined,
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 14),
+                            AuthTextField(
+                              label: 'Senha',
+                              icon: Icons.lock_outline,
+                              obscure: true,
+                              controller: _passwordController,
+                            ),
+                            const SizedBox(height: 28),
+
+                            // ── Botão Entrar ────────────────────────────────
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: _loading
+                                      ? null
+                                      : AppTheme.brandGradient,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _loading ? null : _login,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: _loading
+                                      ? const SizedBox(
+                                          height: 22, width: 22,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : const Text(
+                                          'Entrar',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // ── Criar conta ───────────────────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Não tem conta?  ',
+                            style: TextStyle(color: AppTheme.textSecondary),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterPage(),
+                              ),
+                            ),
+                            child: const Text(
+                              'Criar agora',
+                              style: TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterPage()),
-                  );
-                },
-                child: const Text('Criar conta'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

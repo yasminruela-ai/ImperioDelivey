@@ -4,7 +4,8 @@ import 'core/theme/app_theme.dart';
 import 'modules/splash/splash_page.dart';
 import 'modules/cart/cart_controller.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

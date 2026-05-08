@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
-import 'login_page.dart';
+import 'register_complement_page.dart';
 import 'widgets/auth_text_field.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -15,86 +15,96 @@ class _RegisterPageState extends State<RegisterPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fade;
+  late Animation<Offset> _slide;
 
-  final _nomeController     = TextEditingController();
-  final _emailController    = TextEditingController();
-  final _telefoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _ruaController      = TextEditingController();
-  final _numeroController   = TextEditingController();
-  final _bairroController   = TextEditingController();
-  final _cidadeController   = TextEditingController();
-  final _estadoController   = TextEditingController();
-  final _cepController      = TextEditingController();
+  final _nomeController            = TextEditingController();
+  final _emailController           = TextEditingController();
+  final _passwordController        = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
-  bool _loading = false;
+  bool _googleLoading = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    for (final c in [
-      _nomeController, _emailController, _telefoneController,
-      _passwordController, _ruaController, _numeroController,
-      _bairroController, _cidadeController, _estadoController, _cepController,
-    ]) { c.dispose(); }
+    _nomeController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _register() async {
-    final nome     = _nomeController.text.trim();
-    final email    = _emailController.text.trim();
-    final telefone = _telefoneController.text.trim();
-    final password = _passwordController.text;
-    final rua      = _ruaController.text.trim();
-    final numero   = _numeroController.text.trim();
-    final bairro   = _bairroController.text.trim();
-    final cidade   = _cidadeController.text.trim();
-    final estado   = _estadoController.text.trim();
-    final cep      = _cepController.text.trim();
+  Future<void> _next() async {
+    final nome    = _nomeController.text.trim();
+    final email   = _emailController.text.trim();
+    final senha   = _passwordController.text;
+    final confirm = _confirmPasswordController.text;
 
-    if ([nome, email, password, telefone, rua, numero, cidade, estado, cep]
-        .any((v) => v.isEmpty)) {
-      _showError('Preencha todos os campos obrigatórios');
+    if (nome.isEmpty || email.isEmpty || senha.isEmpty || confirm.isEmpty) {
+      _showError('Preencha todos os campos');
+      return;
+    }
+    if (!email.contains('@') || !email.contains('.')) {
+      _showError('Informe um e-mail válido');
+      return;
+    }
+    if (senha.length < 6) {
+      _showError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    if (senha != confirm) {
+      _showError('As senhas não coincidem');
       return;
     }
 
-    setState(() => _loading = true);
-
-    final error = await AuthService.register(
-      nome: nome, email: email, password: password, telefone: telefone,
-      rua: rua, numero: numero, bairro: bairro,
-      cidade: cidade, estado: estado, cep: cep,
-    );
-
-    if (!mounted) return;
-    setState(() => _loading = false);
-
-    if (error != null) { _showError(error); return; }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Conta criada! Faça o login.'),
-        backgroundColor: AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RegisterComplementPage(
+          nome: nome,
+          email: email,
+          password: senha,
+        ),
       ),
     );
+  }
 
-    Navigator.pushReplacement(
+  Future<void> _handleGoogle() async {
+    setState(() => _googleLoading = true);
+    final result = await AuthService.getGoogleAccountForRegistration();
+    if (!mounted) return;
+    setState(() => _googleLoading = false);
+
+    if (result == null) {
+      _showError('Não foi possível entrar com Google');
+      return;
+    }
+
+    Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(
+        builder: (_) => RegisterComplementPage(
+          nome: result.name,
+          email: result.email,
+          googleIdToken: result.idToken,
+          isGoogle: true,
+        ),
+      ),
     );
   }
 
@@ -112,6 +122,8 @@ class _RegisterPageState extends State<RegisterPage>
 
   @override
   Widget build(BuildContext context) {
+    final busy = _googleLoading;
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -123,169 +135,200 @@ class _RegisterPageState extends State<RegisterPage>
       ),
       body: FadeTransition(
         opacity: _fade,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Dados pessoais ──────────────────────────────────────────
-              _SectionHeader(title: 'Dados pessoais', icon: Icons.person_outline),
-              const SizedBox(height: 16),
-              _card(
-                children: [
-                  AuthTextField(
-                    label: 'Nome completo',
-                    icon: Icons.badge_outlined,
-                    controller: _nomeController,
-                  ),
-                  const SizedBox(height: 14),
-                  AuthTextField(
-                    label: 'E-mail',
-                    icon: Icons.email_outlined,
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 14),
-                  AuthTextField(
-                    label: 'Telefone',
-                    icon: Icons.phone_outlined,
-                    controller: _telefoneController,
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 14),
-                  AuthTextField(
-                    label: 'Senha',
-                    icon: Icons.lock_outline,
-                    obscure: true,
-                    controller: _passwordController,
-                  ),
-                ],
-              ),
+        child: SlideTransition(
+          position: _slide,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Indicador de etapa ─────────────────────────────────────
+                _StepIndicator(current: 1, total: 2),
+                const SizedBox(height: 20),
 
-              const SizedBox(height: 28),
+                _SectionHeader(
+                  title: 'Seus dados',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 16),
 
-              // ── Endereço ────────────────────────────────────────────────
-              _SectionHeader(title: 'Endereço de entrega', icon: Icons.location_on_outlined),
-              const SizedBox(height: 16),
-              _card(
-                children: [
-                  AuthTextField(
-                    label: 'CEP',
-                    icon: Icons.pin_drop_outlined,
-                    controller: _cepController,
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: AuthTextField(
-                          label: 'Rua',
-                          icon: Icons.home_outlined,
-                          controller: _ruaController,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: AuthTextField(
-                          label: 'Nº',
-                          icon: Icons.tag,
-                          controller: _numeroController,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  AuthTextField(
-                    label: 'Bairro',
-                    icon: Icons.location_city_outlined,
-                    controller: _bairroController,
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: AuthTextField(
-                          label: 'Cidade',
-                          icon: Icons.location_on_outlined,
-                          controller: _cidadeController,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: AuthTextField(
-                          label: 'UF',
-                          icon: Icons.map_outlined,
-                          controller: _estadoController,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              // ── Botão cadastrar ─────────────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: DecoratedBox(
+                // ── Card do formulário ─────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: _loading ? null : AppTheme.brandGradient,
-                    borderRadius: BorderRadius.circular(16),
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: AppTheme.cardShadow,
                   ),
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    children: [
+                      AuthTextField(
+                        label: 'Nome completo',
+                        icon: Icons.badge_outlined,
+                        controller: _nomeController,
                       ),
+                      const SizedBox(height: 14),
+                      AuthTextField(
+                        label: 'E-mail',
+                        icon: Icons.email_outlined,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 14),
+                      AuthTextField(
+                        label: 'Senha',
+                        icon: Icons.lock_outline,
+                        obscure: true,
+                        controller: _passwordController,
+                      ),
+                      const SizedBox(height: 14),
+                      AuthTextField(
+                        label: 'Confirmar senha',
+                        icon: Icons.lock_outline,
+                        obscure: true,
+                        controller: _confirmPasswordController,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Botão continuar ────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: busy ? null : AppTheme.brandGradient,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: _loading
-                        ? const SizedBox(
-                            height: 22, width: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'Cadastrar',
+                    child: ElevatedButton(
+                      onPressed: busy ? null : _next,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Continuar',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
                           ),
+                          SizedBox(width: 8),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 20),
+
+                // ── Divider ────────────────────────────────────────────────
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'ou',
+                        style: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── Botão Google ───────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: busy ? null : _handleGoogle,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      backgroundColor: Colors.white,
+                    ),
+                    child: _googleLoading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _GoogleLogo(),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Continuar com Google',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _card({required List<Widget> children}) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppTheme.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
+// ── Widgets auxiliares ──────────────────────────────────────────────────────
+
+class _StepIndicator extends StatelessWidget {
+  final int current;
+  final int total;
+  const _StepIndicator({required this.current, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(total, (i) {
+        final active = i + 1 == current;
+        final done   = i + 1 < current;
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(right: i < total - 1 ? 8 : 0),
+            height: 4,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(2),
+              color: (active || done)
+                  ? AppTheme.primary
+                  : Colors.grey.shade200,
+            ),
+          ),
+        );
+      }),
     );
   }
 }
@@ -293,7 +336,6 @@ class _RegisterPageState extends State<RegisterPage>
 class _SectionHeader extends StatelessWidget {
   final String title;
   final IconData icon;
-
   const _SectionHeader({required this.title, required this.icon});
 
   @override
@@ -303,7 +345,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.10),
+            color: AppTheme.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, size: 18, color: AppTheme.primary),
@@ -318,6 +360,27 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GoogleLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(shape: BoxShape.circle),
+      child: const Text(
+        'G',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
+          height: 1.3,
+        ),
+      ),
     );
   }
 }

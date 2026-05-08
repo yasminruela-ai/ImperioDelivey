@@ -22,7 +22,9 @@ class _LoginPageState extends State<LoginPage>
 
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _loading = false;
+
+  bool _loading       = false;
+  bool _googleLoading = false;
 
   @override
   void initState() {
@@ -66,6 +68,24 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
+    await _goHome();
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _googleLoading = true);
+    final error = await AuthService.loginWithGoogle();
+    if (!mounted) return;
+    setState(() => _googleLoading = false);
+
+    if (error != null) {
+      _showError(error);
+      return;
+    }
+
+    await _goHome();
+  }
+
+  Future<void> _goHome() async {
     await context.read<CartController>().loadFromBackend();
     if (!mounted) return;
     Navigator.pushReplacement(
@@ -88,6 +108,8 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   Widget build(BuildContext context) {
+    final busy = _loading || _googleLoading;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -118,7 +140,7 @@ class _LoginPageState extends State<LoginPage>
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: Image.asset(
@@ -140,7 +162,7 @@ class _LoginPageState extends State<LoginPage>
                       Text(
                         'Peça rápido, receba com sabor',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.82),
+                          color: Colors.white.withValues(alpha: 0.82),
                           fontSize: 14,
                         ),
                       ),
@@ -190,13 +212,11 @@ class _LoginPageState extends State<LoginPage>
                               height: 52,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  gradient: _loading
-                                      ? null
-                                      : AppTheme.brandGradient,
+                                  gradient: busy ? null : AppTheme.brandGradient,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: _loading ? null : _login,
+                                  onPressed: busy ? null : _login,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
@@ -206,7 +226,8 @@ class _LoginPageState extends State<LoginPage>
                                   ),
                                   child: _loading
                                       ? const SizedBox(
-                                          height: 22, width: 22,
+                                          height: 22,
+                                          width: 22,
                                           child: CircularProgressIndicator(
                                             color: Colors.white,
                                             strokeWidth: 2.5,
@@ -221,6 +242,67 @@ class _LoginPageState extends State<LoginPage>
                                           ),
                                         ),
                                 ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // ── Divider ─────────────────────────────────────
+                            Row(
+                              children: [
+                                Expanded(child: Divider(color: Colors.grey.shade300)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'ou',
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: Colors.grey.shade300)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            // ── Botão Google ─────────────────────────────────
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton(
+                                onPressed: busy ? null : _loginWithGoogle,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.grey.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  backgroundColor: Colors.white,
+                                ),
+                                child: _googleLoading
+                                    ? const SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          _GoogleLogo(),
+                                          const SizedBox(width: 12),
+                                          const Text(
+                                            'Entrar com Google',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ),
                           ],
@@ -262,6 +344,26 @@ class _LoginPageState extends State<LoginPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GoogleLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 22,
+      height: 22,
+      child: Text(
+        'G',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
+          height: 1.3,
+        ),
       ),
     );
   }

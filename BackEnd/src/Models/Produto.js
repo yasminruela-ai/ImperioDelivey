@@ -32,7 +32,7 @@ class Produtos {
       return {
         validate: true,
         data: {
-          id: doc.id,
+          id: id,
           ...doc.data(),
         },
       };

@@ -4,8 +4,9 @@ import '../../modules/home/models/product_model.dart';
 import '../constants.dart';
 
 class ProductService {
-  static Future<List<ProductModel>> getAll() async {
-    final response = await http.get(Uri.parse('$kBaseUrl/produto'));
+  static Future<List<ProductModel>> getAll({http.Client? client}) async {
+  final c = client ?? http.Client();
+  final response = await c.get(Uri.parse('$kBaseUrl/produto'));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

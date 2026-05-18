@@ -1,0 +1,187 @@
+@startuml diagrama_classes
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam linetype ortho
+
+' =================== MODELS ===================
+
+class Users {
+  - db : Firestore
+  - auth : FirebaseAuth
+  --
+  + new(user: UserDTO) : Result
+  + delete(uid: String) : Result
+  + update(uid: String, user: UserDTO) : Result
+  + auth(user: AuthDTO) : Result
+}
+
+class Produtos {
+  - db : Firestore
+  --
+  + new(produto: ProdutoDTO) : Result
+  + get(id: String) : Result
+  + getAll() : Result
+  + update(id: String, produto: ProdutoDTO) : Result
+  + delete(id: String) : Result
+}
+
+class Carrinhos {
+  - db : Firestore
+  --
+  + normalizeItem(item: ItemDTO) : ItemNormalized
+  + getByUser(uid: String) : Result
+  + save(uid: String, carrinho: CarrinhoDTO) : Result
+  + addItem(uid: String, item: ItemDTO) : Result
+  + removeItem(uid: String, produtoId: String) : Result
+  + clear(uid: String) : Result
+  + delete(uid: String) : Result
+}
+
+class Pedidos {
+  - db : Firestore
+  --
+  + normalizeItem(item: ItemDTO) : ItemNormalized
+  + calcularTotal(itens: ItemNormalized[]) : Number
+  + new(uid: String, pedido: PedidoDTO) : Result
+  + get(id: String) : Result
+  + getAll() : Result
+  + getByUser(uid: String) : Result
+  + updateStatus(id: String, status: String) : Result
+}
+
+' =================== CONTROLLERS ===================
+
+class UserController {
+  + register(req, res) : void
+  + login(req, res) : void
+  + update(req, res) : void
+  + delete(req, res) : void
+}
+
+class ProdutoController {
+  + newProduto(req, res) : void
+  + getProduto(req, res) : void
+  + getAllProdutos(req, res) : void
+  + updateProduto(req, res) : void
+  + deleteProduto(req, res) : void
+}
+
+class CarrinhoController {
+  + getCarrinho(req, res) : void
+  + saveCarrinho(req, res) : void
+  + addItem(req, res) : void
+  + removeItem(req, res) : void
+  + clearCarrinho(req, res) : void
+}
+
+class PedidoController {
+  + finalizarPedido(req, res) : void
+  + getPedido(req, res) : void
+  + getMeusPedidos(req, res) : void
+  + getAllPedidos(req, res) : void
+  + updateStatus(req, res) : void
+}
+
+' =================== MIDDLEWARE ===================
+
+class AuthMiddleware {
+  + handle(req, res, next) : void
+}
+
+class IsManagerMiddleware {
+  + handle(req, res, next) : void
+}
+
+' =================== VALUE OBJECTS / DTOs ===================
+
+class UserDTO {
+  + nome : String
+  + telefone : String
+  + email : String
+  + password : String
+  + tipo : String
+  + endereco : EnderecoDTO
+}
+
+class EnderecoDTO {
+  + pais : String
+  + estado : String
+  + cidade : String
+  + bairro : String
+  + rua : String
+  + numero : String
+  + cep : String
+}
+
+class ProdutoDTO {
+  + nome : String
+  + descricao : String
+  + valor : Number
+  + imagem : Object
+  + categoria : String
+}
+
+class ItemDTO {
+  + produtoId : String
+  + nome : String
+  + descricao : String
+  + valor : Number
+  + imagem : Object
+  + categoria : String
+  + quantidade : Number
+}
+
+class CarrinhoDTO {
+  + uidUsuario : String
+  + tipo : String
+  + itens : ItemDTO[]
+  + updatedAt : Date
+}
+
+class PedidoDTO {
+  + uidUsuario : String
+  + status : String
+  + total : Number
+  + itens : ItemDTO[]
+  + enderecoEntrega : EnderecoDTO
+  + formaPagamento : String
+  + observacao : String
+  + datas : DatasDTO
+}
+
+class DatasDTO {
+  + realizadoEm : Date
+  + saiuParaEntregaEm : Date
+  + entregueEm : Date
+}
+
+' =================== RELACIONAMENTOS ===================
+
+' Controllers -> Models
+UserController --> Users : usa
+ProdutoController --> Produtos : usa
+CarrinhoController --> Carrinhos : usa
+PedidoController --> Pedidos : usa
+PedidoController --> Carrinhos : usa
+
+' Middleware -> Models/Firebase
+AuthMiddleware --> Users : verifica token
+IsManagerMiddleware --> Users : verifica tipo
+
+' Models -> DTOs
+Users ..> UserDTO : <<usa>>
+Users ..> EnderecoDTO : <<usa>>
+Produtos ..> ProdutoDTO : <<usa>>
+Carrinhos ..> CarrinhoDTO : <<usa>>
+Carrinhos ..> ItemDTO : <<usa>>
+Pedidos ..> PedidoDTO : <<usa>>
+Pedidos ..> ItemDTO : <<usa>>
+Pedidos ..> DatasDTO : <<usa>>
+
+' DTO composição
+UserDTO *-- EnderecoDTO
+CarrinhoDTO *-- ItemDTO
+PedidoDTO *-- ItemDTO
+PedidoDTO *-- DatasDTO
+
+@enduml

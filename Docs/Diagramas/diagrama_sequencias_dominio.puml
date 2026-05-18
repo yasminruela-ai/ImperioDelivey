@@ -1,0 +1,207 @@
+@startuml sequencia_finalizar_pedido
+title SD02 - Finalizar Pedido
+
+actor "Cliente" as C
+participant "Flutter App" as App
+participant "Router\n(Express)" as Router
+participant "AuthMiddleware" as AM
+participant "CarrinhoController" as CC
+participant "PedidoController" as PC
+participant "Carrinhos (Model)" as CM
+participant "Pedidos (Model)" as PM
+participant "Firestore" as FS
+
+== Adicionar Item ao Carrinho ==
+C -> App : Seleciona produto e clica "Adicionar"
+App -> Router : POST /carrinho/item\nBearer {token}\n{produtoId, nome, valor, quantidade}
+Router -> AM : verifica token
+AM --> Router : next() — uid disponível
+Router -> CC : addItem(req, res)
+CC -> CM : addItem(uid, item)
+CM -> FS : carrinhos.doc(uid).get()
+FS --> CM : doc atual
+
+alt Produto já existe no carrinho
+  CM -> CM : soma quantidade
+else Produto novo
+  CM -> CM : push item na lista
+end
+
+CM -> FS : carrinhos.doc(uid).set({itens, updatedAt}, merge)
+FS --> CM : OK
+CM --> CC : { validate: true }
+CC --> App : 200 OK
+App --> C : Item adicionado ao carrinho
+
+== Finalizar Pedido ==
+C -> App : Clica "Confirmar Pedido"\n{enderecoEntrega, formaPagamento, observacao}
+App -> Router : POST /pedido\nBearer {token}
+Router -> AM : verifica token
+AM --> Router : next()
+Router -> PC : finalizarPedido(req, res)
+PC -> CM : getByUser(uid)
+CM -> FS : carrinhos.doc(uid).get()
+FS --> CM : dados do carrinho
+CM --> PC : { validate: true, data: { itens } }
+
+alt Carrinho vazio ou não encontrado
+  PC --> App : 400 "Carrinho vazio"
+  App --> C : Erro: "Adicione itens antes de finalizar"
+else Carrinho com itens
+  PC -> PM : new(uid, { itens, enderecoEntrega, formaPagamento, observacao })
+  PM -> PM : calcularTotal(itens)
+  PM -> FS : pedidos.doc().set({status:"pendente", total, itens, datas...})
+  FS --> PM : OK
+  PM --> PC : { validate: true, data: { id } }
+  PC -> CM : clear(uid)
+  CM -> FS : carrinhos.doc(uid).update({itens: []})
+  FS --> CM : OK
+  PC --> App : 201 { success: true, data: { id } }
+  App --> C : "Pedido realizado com sucesso!"
+end
+
+@enduml
+
+
+@startuml sequencia_atualizar_status
+title SD03 - Gerente Atualiza Status do Pedido
+
+actor "Gerente" as G
+actor "Cliente" as C
+participant "Flutter App" as App
+participant "Router\n(Express)" as Router
+participant "AuthMiddleware" as AM
+participant "IsManager\nMiddleware" as IM
+participant "PedidoController" as PC
+participant "Pedidos (Model)" as PM
+participant "Firestore" as FS
+
+G -> App : Seleciona pedido e altera status\n{status: "saiu_para_entrega"}
+App -> Router : PUT /pedido/:id/status\nBearer {token}
+Router -> AM : verifica token
+AM --> Router : next()
+Router -> IM : isManager(req, res, next)
+IM -> FS : users.doc(uid).get()
+FS --> IM : { tipo: "gerente" }
+
+alt Usuário não é gerente
+  IM --> App : 403 "Acesso negado"
+  App --> G : Permissão negada
+else Usuário é gerente
+  IM --> Router : next()
+  Router -> PC : updateStatus(req, res)
+  PC -> PM : updateStatus(id, status)
+  PM -> FS : pedidos.doc(id).get()
+  FS --> PM : pedido atual com datas
+
+  alt status == "saiu_para_entrega"
+    PM -> PM : datas.saiuParaEntregaEm = agora
+  else status == "entregue"
+    PM -> PM : datas.entregueEm = agora\n(preenche saiuParaEntregaEm se vazio)
+  end
+
+  PM -> FS : pedidos.doc(id).update({status, datas, updatedAt})
+  FS --> PM : OK
+  PM --> PC : { validate: true, data: { id } }
+  PC --> App : 200 { success: true }
+  App --> G : Status atualizado com sucesso
+  note over App, C : Sistema notifica o Cliente\nsobre a atualização de status (RN06 / RF14)
+end
+
+@enduml
+
+
+@startuml sequencia_gerenciar_produtos
+title SD04 - Gerenciar Produtos (Gerente)
+
+actor "Gerente" as G
+participant "Flutter App" as App
+participant "Router\n(Express)" as Router
+participant "AuthMiddleware" as AM
+participant "IsManager\nMiddleware" as IM
+participant "ProdutoController" as PC
+participant "Produtos (Model)" as PM
+participant "Cloudinary" as CL
+participant "Firestore" as FS
+participant "Cache IA" as IA
+
+== Cadastrar Produto ==
+G -> App : Preenche formulário\n{nome, descricao, valor, categoria} + imagem
+App -> Router : POST /produto\nBearer {token}\nmultipart/form-data
+Router -> AM : verifica token
+AM --> Router : next()
+Router -> IM : verifica tipo "gerente"
+IM --> Router : next()
+Router -> PC : newProduto(req, res)
+
+alt Imagem enviada
+  PC -> CL : uploadImage(req.file.path)
+  CL --> PC : { url, public_id }
+end
+
+PC -> PM : new({nome, descricao, valor, imagem, categoria})
+PM -> FS : produtos.doc().set({...})
+FS --> PM : OK
+PM --> PC : { validate: true, data: { id } }
+PC -> IA : invalidarCache()
+PC --> App : 201 { success: true, data: { id } }
+App --> G : "Produto criado com sucesso!"
+
+== Remover Produto ==
+G -> App : Clica "Excluir produto"
+App -> Router : DELETE /produto/:id\nBearer {token}
+Router -> AM : verifica token
+AM --> Router : next()
+Router -> IM : verifica tipo "gerente"
+IM --> Router : next()
+Router -> PC : deleteProduto(req, res)
+PC -> PM : delete(id)
+PM -> FS : produtos.doc(id).get()
+FS --> PM : { imagem: { public_id } }
+
+alt Produto possui imagem no Cloudinary
+  PM -> CL : cloudinary.uploader.destroy(public_id)
+  CL --> PM : OK
+end
+
+PM -> FS : produtos.doc(id).delete()
+FS --> PM : OK
+PM --> PC : { validate: true, data: { id } }
+PC -> IA : invalidarCache()
+PC --> App : 200 { success: true }
+App --> G : "Produto removido com sucesso!"
+
+@enduml
+
+
+@startuml sequencia_chat_ia
+title SD05 - Interagir com Chat IA
+
+actor "Cliente" as C
+participant "Flutter App" as App
+participant "Router\n(Express)" as Router
+participant "chatHandler\n(ia.js)" as CH
+participant "Cache IA" as Cache
+participant "Claude API\n(Anthropic)" as Claude
+participant "Firestore" as FS
+
+C -> App : Envia mensagem no chat\n{message: "Quais são os combos do dia?"}
+App -> Router : POST /chat\n{message}
+note right of Router : Rota pública\n(sem authMiddleware)
+Router -> CH : chatHandler(req, res)
+
+alt Cache válido (produtos em memória)
+  CH -> Cache : obterProdutosCache()
+  Cache --> CH : lista de produtos
+else Cache expirado ou inválido
+  CH -> FS : produtos.get()
+  FS --> CH : snapshot dos produtos
+  CH -> Cache : atualizarCache(produtos)
+end
+
+CH -> Claude : POST /v1/messages\n{system: "Você é assistente do ImperioDelivery...\n[dados dos produtos]",\nmessages: [{role:"user", content: message}]}
+Claude --> CH : { content: [{ type:"text", text: resposta }] }
+CH --> App : 200 { reply: "Os combos do dia são..." }
+App --> C : Exibe resposta do assistente
+
+@enduml

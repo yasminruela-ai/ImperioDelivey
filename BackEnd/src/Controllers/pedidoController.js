@@ -123,6 +123,10 @@ class PedidoController {
       const { id } = req.params;
       const { status } = req.body;
 
+      if (!status) {
+        return res.status(400).json({ success: false, message: "Campo 'status' é obrigatório" });
+      }
+
       const result = await pedidos.updateStatus(id, status);
 
       return result.validate

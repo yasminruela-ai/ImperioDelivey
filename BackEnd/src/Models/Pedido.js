@@ -1,6 +1,17 @@
 const { adminFirebase } = require("../config/firebase");
 const db = adminFirebase.firestore();
 
+const STATUS_VALIDOS = ["pendente", "aceito", "em_preparo", "saiu_para_entrega", "entregue", "cancelado"];
+
+const TRANSICOES_VALIDAS = {
+  pendente:           ["aceito", "cancelado"],
+  aceito:             ["em_preparo", "cancelado"],
+  em_preparo:         ["saiu_para_entrega", "cancelado"],
+  saiu_para_entrega:  ["entregue"],
+  entregue:           [],
+  cancelado:          [],
+};
+
 class Pedidos {
   normalizeItem(item) {
     return {
@@ -40,8 +51,11 @@ class Pedidos {
         observacao: pedido.observacao || "",
         datas: {
           realizadoEm: new Date(),
+          aceitoEm: null,
+          emPreparoEm: null,
           saiuParaEntregaEm: null,
           entregueEm: null,
+          canceladoEm: null,
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -108,6 +122,10 @@ class Pedidos {
 
   async updateStatus(id, status) {
     try {
+      if (!STATUS_VALIDOS.includes(status)) {
+        return { validate: false, error: `Status inválido. Valores aceitos: ${STATUS_VALIDOS.join(", ")}` };
+      }
+
       const docRef = db.collection("pedidos").doc(id);
       const doc = await docRef.get();
 
@@ -116,18 +134,29 @@ class Pedidos {
       }
 
       const pedido = doc.data();
+      const statusAtual = pedido.status;
+
+      if (!TRANSICOES_VALIDAS[statusAtual]?.includes(status)) {
+        return {
+          validate: false,
+          error: `Transição inválida: '${statusAtual}' → '${status}'. Permitidas: ${TRANSICOES_VALIDAS[statusAtual]?.join(", ") || "nenhuma"}`,
+        };
+      }
+
       const datas = pedido.datas || {};
       const agora = new Date();
 
-      if (status === "saiu_para_entrega" && !datas.saiuParaEntregaEm) {
-        datas.saiuParaEntregaEm = agora;
-      }
+      const timestampMap = {
+        aceito:            "aceitoEm",
+        em_preparo:        "emPreparoEm",
+        saiu_para_entrega: "saiuParaEntregaEm",
+        entregue:          "entregueEm",
+        cancelado:         "canceladoEm",
+      };
 
-      if (status === "entregue" && !datas.entregueEm) {
-        datas.entregueEm = agora;
-        if (!datas.saiuParaEntregaEm) {
-          datas.saiuParaEntregaEm = agora;
-        }
+      const campoData = timestampMap[status];
+      if (campoData && !datas[campoData]) {
+        datas[campoData] = agora;
       }
 
       await docRef.update({

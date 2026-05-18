@@ -51,6 +51,21 @@ class UserController {
       : res.status(400).json({ success: false, message: result.error });
   }
 
+  async saveFcmToken(req, res) {
+    const uid = req.user.uid;
+    const { fcmToken } = req.body;
+
+    if (!fcmToken) {
+      return res.status(400).json({ success: false, message: "fcmToken é obrigatório" });
+    }
+
+    const result = await users.saveFcmToken(uid, fcmToken);
+
+    return result.validate
+      ? res.status(200).json({ success: true })
+      : res.status(400).json({ success: false, message: result.error });
+  }
+
   async delete(req, res) {
     const uid = req.user.uid;
 

@@ -80,6 +80,25 @@ class Users {
     }
   }
 
+  async saveFcmToken(uid, token) {
+    try {
+      await db.collection("users").doc(uid).update({ fcmToken: token });
+      return { validate: true };
+    } catch (error) {
+      return { validate: false, error: error.message };
+    }
+  }
+
+  async getFcmToken(uid) {
+    try {
+      const doc = await db.collection("users").doc(uid).get();
+      if (!doc.exists) return null;
+      return doc.data().fcmToken || null;
+    } catch {
+      return null;
+    }
+  }
+
   async auth(user) {
     try {
       const apiKey = process.env.FIREBASE_API_KEY;

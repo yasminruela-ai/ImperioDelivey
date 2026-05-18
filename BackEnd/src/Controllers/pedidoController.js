@@ -1,5 +1,7 @@
 const pedidos = require("../Models/Pedido");
 const carrinho = require("../Models/Carrinho");
+const users = require("../Models/User");
+const { sendOrderStatusNotification } = require("../notifications");
 
 class PedidoController {
 
@@ -129,9 +131,14 @@ class PedidoController {
 
       const result = await pedidos.updateStatus(id, status);
 
-      return result.validate
-        ? res.status(200).json({ success: true, data: result.data })
-        : res.status(400).json({ success: false, message: result.error });
+      if (!result.validate) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+
+      const fcmToken = await users.getFcmToken(result.data.uidUsuario);
+      await sendOrderStatusNotification(fcmToken, status, id);
+
+      return res.status(200).json({ success: true, data: { id } });
 
     } catch (error) {
       return res.status(500).json({

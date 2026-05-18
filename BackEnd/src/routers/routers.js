@@ -32,6 +32,7 @@ router.post("/login", userController.login);
 
 router.put("/user", authMiddleware, userController.update);
 router.delete("/user", authMiddleware, userController.delete);
+router.post("/user/fcm-token", authMiddleware, userController.saveFcmToken);
 
 
 router.get("/produto", produtosController.getAllProdutos);

@@ -165,7 +165,7 @@ class Pedidos {
         updatedAt: agora,
       });
 
-      return { validate: true, data: { id } };
+      return { validate: true, data: { id, uidUsuario: pedido.uidUsuario } };
     } catch (error) {
       return { validate: false, error: error.message };
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../cart/cart_controller.dart';
 import '../home/home_page.dart';
@@ -86,7 +87,10 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _goHome() async {
-    await context.read<CartController>().loadFromBackend();
+    await Future.wait([
+      context.read<CartController>().loadFromBackend(),
+      NotificationService.registerToken(),
+    ]);
     if (!mounted) return;
     Navigator.pushReplacement(
       context,

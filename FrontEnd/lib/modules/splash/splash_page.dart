@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notification_service.dart';
 import '../auth/login_page.dart';
 import '../home/home_page.dart';
 
@@ -22,6 +23,8 @@ class _SplashPageState extends State<SplashPage> {
     if (!mounted) return;
 
     final loggedIn = await AuthService.isLoggedIn();
+
+    if (loggedIn) await NotificationService.registerToken();
 
     if (!mounted) return;
     Navigator.pushReplacement(

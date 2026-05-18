@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../cart/cart_controller.dart';
 import '../home/home_page.dart';
@@ -71,6 +72,7 @@ class _RegisterComplementPageState extends State<RegisterComplementPage>
   }
 
   Future<void> _submit() async {
+    final cart     = context.read<CartController>();
     final telefone = _telefoneController.text.trim();
     final cep      = _cepController.text.trim();
     final rua      = _ruaController.text.trim();
@@ -125,7 +127,14 @@ class _RegisterComplementPageState extends State<RegisterComplementPage>
     }
 
     if (widget.isGoogle) {
-      await context.read<CartController>().loadFromBackend();
+      await AuthService.saveEndereco({
+        'rua': rua, 'numero': numero, 'bairro': bairro,
+        'cidade': cidade, 'estado': estado, 'cep': cep, 'pais': 'Brasil',
+      });
+      await Future.wait([
+        cart.loadFromBackend(),
+        NotificationService.registerToken(),
+      ]);
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,

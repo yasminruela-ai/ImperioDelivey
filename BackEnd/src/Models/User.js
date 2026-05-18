@@ -80,6 +80,16 @@ class Users {
     }
   }
 
+  async get(uid) {
+    try {
+      const doc = await db.collection("users").doc(uid).get();
+      if (!doc.exists) return { validate: false, error: "Usuário não encontrado" };
+      return { validate: true, data: { uid, ...doc.data() } };
+    } catch (error) {
+      return { validate: false, error: error.message };
+    }
+  }
+
   async saveFcmToken(uid, token) {
     try {
       await db.collection("users").doc(uid).update({ fcmToken: token });

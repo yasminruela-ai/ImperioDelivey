@@ -32,6 +32,15 @@ class UserController {
       : res.status(401).json({ success: false, message: result.error });
   }
 
+  async me(req, res) {
+    const uid = req.user.uid;
+    const result = await users.get(uid);
+
+    return result.validate
+      ? res.status(200).json({ success: true, data: result.data })
+      : res.status(404).json({ success: false, message: result.error });
+  }
+
   async update(req, res) {
     const uid = req.user.uid;
 

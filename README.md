@@ -12,7 +12,7 @@ Aplicativo mobile de delivery para hamburgueria com assistente de inteligência 
 - **Checkout** com escolha de forma de pagamento
 - **Acompanhamento de pedido** em tempo real com atualização automática a cada 10 segundos
 - **Notificações push** (FCM) disparadas a cada mudança de status do pedido
-- **Painel do gerente** — visualiza todos os pedidos e avança o status com validação de transição
+- **Rotas protegidas para gerente** — `GET /pedidos` e `PUT /pedido/:id/status` disponíveis na API, painel mobile ainda não implementado
 
 ---
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../cart/cart_controller.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/services/order_service.dart';
 import 'order_success_page.dart';
 
@@ -16,14 +17,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String paymentMethod = 'PIX';
   bool _loading = false;
 
+  Map<String, dynamic>? _endereco;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEndereco();
+  }
+
+  Future<void> _loadEndereco() async {
+    var e = await AuthService.getEndereco();
+    if (e == null) {
+      await AuthService.fetchAndSaveEndereco();
+      e = await AuthService.getEndereco();
+    }
+    if (mounted) setState(() => _endereco = e);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartController>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-      ),
+      appBar: AppBar(title: const Text('Checkout')),
       body: Column(
         children: [
           Expanded(
@@ -50,7 +66,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ],
             ),
           ),
-
           _bottomBar(cart),
         ],
       ),
@@ -62,45 +77,76 @@ class _CheckoutPageState extends State<CheckoutPage> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
   }
 
   Widget _addressCard() {
+    final e = _endereco;
+
+    if (e == null) {
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    final rua    = e['rua'] as String? ?? '';
+    final numero = e['numero'] as String? ?? '';
+    final bairro = e['bairro'] as String? ?? '';
+    final cidade = e['cidade'] as String? ?? '';
+    final estado = e['estado'] as String? ?? '';
+    final cep    = e['cep'] as String? ?? '';
+
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          'Rua Exemplo, 123\nBairro Centro\nCidade - SP',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.location_on_outlined,
+                color: AppTheme.primary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$rua, $numero\n$bairro\n$cidade - $estado  CEP $cep',
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _paymentOptions() {
-    return Column(
-      children: [
-        _paymentTile('PIX'),
-        _paymentTile('Cartão de crédito'),
-        _paymentTile('Dinheiro'),
-      ],
+    return RadioGroup<String>(
+      groupValue: paymentMethod,
+      onChanged: (value) {
+        if (value != null) setState(() => paymentMethod = value);
+      },
+      child: Column(
+        children: [
+          _paymentTile('PIX'),
+          _paymentTile('Cartão de crédito'),
+          _paymentTile('Dinheiro'),
+        ],
+      ),
     );
   }
 
   Widget _paymentTile(String method) {
     return RadioListTile<String>(
       value: method,
-      groupValue: paymentMethod,
-      onChanged: (value) {
-        setState(() => paymentMethod = value!);
-      },
       title: Text(method),
     );
   }
@@ -113,7 +159,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         boxShadow: [
           BoxShadow(
             blurRadius: 10,
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
           ),
         ],
       ),
@@ -124,9 +170,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             Text(
               'Total: R\$ ${cart.total.toStringAsFixed(2)}',
               style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+                  fontSize: 18, fontWeight: FontWeight.bold),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -139,9 +183,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                          color: Colors.white, strokeWidth: 2),
                     )
                   : const Text('Finalizar'),
             ),
@@ -154,8 +196,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Future<void> _finalizarPedido(CartController cart) async {
     setState(() => _loading = true);
 
+    final enderecoFormatado = await AuthService.getEnderecoFormatado();
+
     final result = await OrderService.finalizarPedido(
-      enderecoEntrega: 'Rua Exemplo, 123, Bairro Centro, Cidade - SP',
+      enderecoEntrega: enderecoFormatado,
       formaPagamento: paymentMethod,
     );
 

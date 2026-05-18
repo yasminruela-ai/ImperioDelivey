@@ -5,8 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 
 class AuthService {
-  static const _tokenKey = 'auth_token';
-  static const _uidKey = 'auth_uid';
+  static const _tokenKey    = 'auth_token';
+  static const _uidKey      = 'auth_uid';
+  static const _enderecoKey = 'user_endereco';
 
   // serverClientId é o OAuth 2.0 Web Client ID do Firebase Console
   // Encontre em: Firebase Console → Project Settings → General → Web API Key
@@ -39,10 +40,53 @@ class AuthService {
     await prefs.setString(_uidKey, uid);
   }
 
+  static Future<void> saveEndereco(Map<String, dynamic> endereco) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_enderecoKey, jsonEncode(endereco));
+  }
+
+  static Future<Map<String, dynamic>?> getEndereco() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_enderecoKey);
+    if (raw == null) return null;
+    return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  static Future<void> fetchAndSaveEndereco() async {
+    try {
+      final headers = await authHeaders();
+      final response = await http.get(
+        Uri.parse('$kBaseUrl/user/me'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final endereco = (data['data'] as Map<String, dynamic>?)?['endereco'];
+        if (endereco is Map<String, dynamic>) {
+          await saveEndereco(endereco);
+        }
+      }
+    } catch (_) {}
+  }
+
+  static Future<String?> getEnderecoFormatado() async {
+    final e = await getEndereco();
+    if (e == null) return null;
+    final partes = [
+      if (e['rua'] != null) '${e['rua']}, ${e['numero'] ?? 's/n'}',
+      if (e['bairro'] != null) e['bairro'] as String,
+      if (e['cidade'] != null && e['estado'] != null)
+        '${e['cidade']} - ${e['estado']}',
+      if (e['cep'] != null) 'CEP ${e['cep']}',
+    ];
+    return partes.join(', ');
+  }
+
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
     await prefs.remove(_uidKey);
+    await prefs.remove(_enderecoKey);
     await _googleSignIn.signOut();
   }
 
@@ -62,6 +106,12 @@ class AuthService {
         final token = data['data']['idToken'] as String;
         final uid = data['data']['uid'] as String;
         await _saveSession(token, uid);
+
+        final endereco = (data['data']['user'] as Map<String, dynamic>?)?['endereco'];
+        if (endereco is Map<String, dynamic>) {
+          await saveEndereco(endereco);
+        }
+
         return null;
       }
 

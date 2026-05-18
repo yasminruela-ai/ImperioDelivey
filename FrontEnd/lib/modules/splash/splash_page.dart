@@ -24,7 +24,12 @@ class _SplashPageState extends State<SplashPage> {
 
     final loggedIn = await AuthService.isLoggedIn();
 
-    if (loggedIn) await NotificationService.registerToken();
+    if (loggedIn) {
+      await Future.wait([
+        NotificationService.registerToken(),
+        AuthService.fetchAndSaveEndereco(),
+      ]);
+    }
 
     if (!mounted) return;
     Navigator.pushReplacement(

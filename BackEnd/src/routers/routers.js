@@ -30,6 +30,7 @@ router.post("/funcionario", authMiddleware, isManager, (req, res, next) => {
 
 router.post("/login", userController.login);
 
+router.get("/user/me", authMiddleware, userController.me);
 router.put("/user", authMiddleware, userController.update);
 router.delete("/user", authMiddleware, userController.delete);
 router.post("/user/fcm-token", authMiddleware, userController.saveFcmToken);

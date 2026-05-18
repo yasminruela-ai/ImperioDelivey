@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/notification_service.dart';
@@ -42,7 +45,8 @@ class _RegisterComplementPageState extends State<RegisterComplementPage>
   final _cidadeController   = TextEditingController();
   final _estadoController   = TextEditingController();
 
-  bool _loading = false;
+  bool _loading    = false;
+  bool _loadingCep = false;
 
   @override
   void initState() {
@@ -57,6 +61,36 @@ class _RegisterComplementPageState extends State<RegisterComplementPage>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
+    _cepController.addListener(_onCepChanged);
+  }
+
+  Future<void> _onCepChanged() async {
+    final cep = _cepController.text.replaceAll(RegExp(r'\D'), '');
+    if (cep.length != 8) return;
+    if (_loadingCep) return;
+
+    setState(() => _loadingCep = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://viacep.com.br/ws/$cep/json/'),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['erro'] == true || data['erro'] == 'true') {
+          _showError('CEP não encontrado');
+        } else {
+          _ruaController.text    = data['logradouro'] as String? ?? '';
+          _bairroController.text = data['bairro']     as String? ?? '';
+          _cidadeController.text = data['localidade'] as String? ?? '';
+          _estadoController.text = data['uf']         as String? ?? '';
+        }
+      }
+    } catch (_) {
+      // falha silenciosa — usuário preenche manualmente
+    } finally {
+      if (mounted) setState(() => _loadingCep = false);
+    }
   }
 
   @override
@@ -308,6 +342,18 @@ class _RegisterComplementPageState extends State<RegisterComplementPage>
                         icon: Icons.pin_drop_outlined,
                         controller: _cepController,
                         keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(8),
+                        ],
+                        suffix: _loadingCep
+                            ? const SizedBox(
+                                width: 18, height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppTheme.primary,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(height: 14),
                       Row(

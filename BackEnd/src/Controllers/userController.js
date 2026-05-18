@@ -60,6 +60,20 @@ class UserController {
       : res.status(400).json({ success: false, message: result.error });
   }
 
+  async updateEnderecos(req, res) {
+    const uid = req.user.uid;
+    const { enderecos } = req.body;
+
+    if (!Array.isArray(enderecos)) {
+      return res.status(400).json({ success: false, message: "'enderecos' deve ser uma lista" });
+    }
+
+    const result = await users.saveEnderecos(uid, enderecos);
+    return result.validate
+      ? res.status(200).json({ success: true })
+      : res.status(400).json({ success: false, message: result.error });
+  }
+
   async saveFcmToken(req, res) {
     const uid = req.user.uid;
     const { fcmToken } = req.body;

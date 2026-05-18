@@ -7,6 +7,7 @@ import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../modules/cart/cart_controller.dart';
 import '../../modules/checkout/order_success_page.dart';
+import '../address/address_picker_sheet.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   const CheckoutBottomSheet({super.key});
@@ -35,12 +36,36 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   }
 
   Future<void> _loadEndereco() async {
-    var e = await AuthService.getEndereco();
-    if (e == null) {
-      await AuthService.fetchAndSaveEndereco();
-      e = await AuthService.getEndereco();
+    var enderecos = await AuthService.getEnderecos();
+
+    // Migration: if no multi-address list yet, promote the legacy single address
+    if (enderecos.isEmpty) {
+      var legacy = await AuthService.getEndereco();
+      if (legacy == null) {
+        await AuthService.fetchAndSaveEndereco();
+        legacy = await AuthService.getEndereco();
+      }
+      if (legacy != null) {
+        final migrated = {...legacy, 'label': 'Casa'};
+        enderecos = [migrated];
+        await AuthService.saveEnderecosList(enderecos);
+      }
     }
-    if (mounted) setState(() { _endereco = e; _loadingAddress = false; });
+
+    final selected = await AuthService.getEnderecoSelecionado();
+    if (mounted) setState(() { _endereco = selected; _loadingAddress = false; });
+  }
+
+  Future<void> _changeAddress() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddressPickerSheet(),
+    );
+    if (result != null && mounted) {
+      setState(() => _endereco = result);
+    }
   }
 
   String get _enderecoFormatado {
@@ -276,27 +301,51 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     final estado = e['estado'] as String? ?? '';
     final cep    = e['cep']    as String? ?? '';
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$rua, $numero\n$bairro — $cidade/$estado\nCEP $cep',
-              style: const TextStyle(
-                fontSize: 13, height: 1.6, color: AppTheme.textPrimary,
+    return GestureDetector(
+      onTap: _changeAddress,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.location_on_rounded, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (e['label'] != null)
+                    Text(
+                      e['label'] as String,
+                      style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700,
+                        color: AppTheme.primary,
+                      ),
+                    ),
+                  Text(
+                    '$rua, $numero\n$bairro — $cidade/$estado\nCEP $cep',
+                    style: const TextStyle(
+                      fontSize: 13, height: 1.6, color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Text(
+              'Alterar',
+              style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700,
+                color: AppTheme.primary.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

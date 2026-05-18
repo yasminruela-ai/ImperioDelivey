@@ -33,6 +33,7 @@ router.post("/login", userController.login);
 router.get("/user/me", authMiddleware, userController.me);
 router.put("/user", authMiddleware, userController.update);
 router.delete("/user", authMiddleware, userController.delete);
+router.put("/user/enderecos", authMiddleware, userController.updateEnderecos);
 router.post("/user/fcm-token", authMiddleware, userController.saveFcmToken);
 
 

@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 
 class AuthService {
-  static const _tokenKey    = 'auth_token';
-  static const _uidKey      = 'auth_uid';
-  static const _enderecoKey = 'user_endereco';
+  static const _tokenKey      = 'auth_token';
+  static const _uidKey        = 'auth_uid';
+  static const _enderecoKey   = 'user_endereco';
+  static const _enderecosKey  = 'user_enderecos';   // lista de endereços
+  static const _enderecoSelKey = 'user_endereco_sel'; // índice selecionado
 
   // serverClientId é o OAuth 2.0 Web Client ID do Firebase Console
   // Encontre em: Firebase Console → Project Settings → General → Web API Key
@@ -50,6 +52,45 @@ class AuthService {
     final raw = prefs.getString(_enderecoKey);
     if (raw == null) return null;
     return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  // ─── Múltiplos endereços ──────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getEnderecos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_enderecosKey);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  static Future<void> saveEnderecosList(List<Map<String, dynamic>> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_enderecosKey, jsonEncode(list));
+    try {
+      final headers = await authHeaders();
+      await http.put(
+        Uri.parse('$kBaseUrl/user/enderecos'),
+        headers: headers,
+        body: jsonEncode({'enderecos': list}),
+      );
+    } catch (_) {}
+  }
+
+  static Future<int> getEnderecoSelecionadoIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_enderecoSelKey) ?? 0;
+  }
+
+  static Future<void> setEnderecoSelecionadoIndex(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_enderecoSelKey, index);
+  }
+
+  static Future<Map<String, dynamic>?> getEnderecoSelecionado() async {
+    final list = await getEnderecos();
+    if (list.isEmpty) return null;
+    final idx = await getEnderecoSelecionadoIndex();
+    return list[idx.clamp(0, list.length - 1)];
   }
 
   static Future<void> fetchAndSaveEndereco() async {

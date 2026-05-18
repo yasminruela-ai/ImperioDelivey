@@ -90,6 +90,15 @@ class Users {
     }
   }
 
+  async saveEnderecos(uid, enderecos) {
+    try {
+      await db.collection("users").doc(uid).update({ enderecos });
+      return { validate: true };
+    } catch (error) {
+      return { validate: false, error: error.message };
+    }
+  }
+
   async saveFcmToken(uid, token) {
     try {
       await db.collection("users").doc(uid).update({ fcmToken: token });

@@ -112,6 +112,9 @@ class CartController extends ChangeNotifier {
         .catchError((_) {});
   }
 
+  /// Força sincronização imediata do carrinho com o backend.
+  Future<void> syncToBackend() => _syncBackend();
+
   /// Carrega o carrinho do backend após o login (substitui o carrinho local).
   Future<void> loadFromBackend() async {
     final logged = await AuthService.isLoggedIn();

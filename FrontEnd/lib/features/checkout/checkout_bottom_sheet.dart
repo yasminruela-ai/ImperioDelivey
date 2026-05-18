@@ -6,8 +6,8 @@ import '../../core/constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../modules/cart/cart_controller.dart';
-import '../../modules/checkout/order_success_page.dart';
 import '../address/address_picker_sheet.dart';
+import 'order_confirmed_page.dart';
 
 class CheckoutBottomSheet extends StatefulWidget {
   const CheckoutBottomSheet({super.key});
@@ -81,16 +81,29 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   }
 
   Future<void> _confirmarPedido() async {
+    debugPrint('[CHECKOUT] ▶ iniciando confirmação');
+    debugPrint('[CHECKOUT] endereço="$_enderecoFormatado"');
+
     if (_enderecoFormatado.trim().isEmpty) {
-      _showSnack('Endereço não encontrado. Faça login novamente.', isError: true);
+      debugPrint('[CHECKOUT] ✗ endereço vazio');
+      _showError('Endereço não encontrado. Atualize seu perfil.');
       return;
     }
 
     setState(() => _loading = true);
 
     try {
-      final cart    = context.read<CartController>();
+      final cart = context.read<CartController>();
+      debugPrint('[CHECKOUT] itens Flutter: ${cart.items.length}');
+
+      // Garante que o Firestore tem os itens antes de criar o pedido
+      debugPrint('[CHECKOUT] sincronizando carrinho...');
+      await cart.syncToBackend();
+      debugPrint('[CHECKOUT] carrinho sincronizado');
+
       final headers = await AuthService.authHeaders();
+      debugPrint('[CHECKOUT] token presente: ${headers.containsKey("Authorization")}');
+      debugPrint('[CHECKOUT] POST $kBaseUrl/pedido');
 
       final response = await http.post(
         Uri.parse('$kBaseUrl/pedido'),
@@ -102,43 +115,59 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
         }),
       );
 
-      if (!mounted) return;
+      debugPrint('[CHECKOUT] status: ${response.statusCode}');
+      debugPrint('[CHECKOUT] body: ${response.body}');
+
+      if (!mounted) {
+        debugPrint('[CHECKOUT] widget desmontado após request');
+        return;
+      }
       setState(() => _loading = false);
 
       if (response.statusCode == 201) {
         final data    = jsonDecode(response.body) as Map<String, dynamic>;
         final orderId = (data['data'] as Map<String, dynamic>)['id'] as String;
+        debugPrint('[CHECKOUT] ✓ pedido criado: $orderId');
 
         cart.clear();
 
-        Navigator.pop(context); // fecha bottom sheet
-        Navigator.pop(context); // fecha cart page
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OrderSuccessPage(orderId: orderId),
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            pageBuilder:        (_, a, _) => OrderConfirmedPage(orderId: orderId),
+            transitionsBuilder: (_, a, _, child) => FadeTransition(opacity: a, child: child),
+            transitionDuration: const Duration(milliseconds: 400),
           ),
+          (route) => route.isFirst,
         );
       } else {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        _showSnack(data['message'] as String? ?? 'Erro ao finalizar pedido', isError: true);
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final msg  = body['message'] as String? ?? 'Erro ${response.statusCode}';
+        debugPrint('[CHECKOUT] ✗ erro da API: $msg');
+        _showError(msg);
       }
-    } catch (_) {
+    } catch (e, stack) {
+      debugPrint('[CHECKOUT] ✗ exceção: $e\n$stack');
       if (!mounted) return;
       setState(() => _loading = false);
-      _showSnack('Erro de conexão com o servidor', isError: true);
+      _showError('Erro inesperado: $e');
     }
   }
 
-  void _showSnack(String msg, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+  void _showError(String msg) {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Erro no pedido'),
         content: Text(msg),
-        backgroundColor: isError ? AppTheme.error : AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: AppTheme.primary)),
+          ),
+        ],
       ),
     );
   }

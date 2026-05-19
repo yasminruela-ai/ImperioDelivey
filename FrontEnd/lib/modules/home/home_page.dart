@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../orders/orders_history_page.dart';
 
 import '../../core/services/auth_service.dart';
 import '../../core/services/product_service.dart';
@@ -15,24 +16,23 @@ import 'widgets/product_card.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({super.key});
-
+ 
   @override
   State<HomePage> createState() => _HomePageState();
 }
-
+ 
 class _HomePageState extends State<HomePage> {
   final GlobalKey cartIconKey = GlobalKey();
   late Future<List<ProductModel>> _productsFuture;
-
-  /// Valor do campo `categoria` no backend — string vazia = todos
+ 
   String _selectedCategory = '';
-
+ 
   @override
   void initState() {
     super.initState();
     _productsFuture = ProductService.getAll();
   }
-
+ 
   List<ProductModel> _filtered(List<ProductModel> all) {
     if (_selectedCategory.isEmpty) return all;
     return all
@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage> {
             _selectedCategory.toLowerCase())
         .toList();
   }
-
+ 
   void _logout() async {
     await AuthService.logout();
     if (!mounted) return;
@@ -51,7 +51,7 @@ class _HomePageState extends State<HomePage> {
       (_) => false,
     );
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
             builder: (context, snapshot) {
               final allProducts = snapshot.data ?? [];
               final products    = _filtered(allProducts);
-
+ 
               return CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
@@ -75,8 +75,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-                  // ── Categorias ───────────────────────────────────────────
                   SliverToBoxAdapter(
                     child: CategoryWidget(
                       selected: _selectedCategory,
@@ -84,8 +82,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 20)),
-
-                  // ── Título da seção ──────────────────────────────────────
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -118,8 +114,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                  // ── Estados de loading / erro / lista ────────────────────
                   if (snapshot.connectionState == ConnectionState.waiting)
                     const SliverToBoxAdapter(
                       child: Padding(
@@ -189,22 +183,17 @@ class _HomePageState extends State<HomePage> {
                         childCount: products.length,
                       ),
                     ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               );
             },
           ),
-
-          // ── Barra flutuante do carrinho ──────────────────────────────────
           _buildCartBottomBar(context),
         ],
       ),
     );
   }
-
-  // ── AppBar ─────────────────────────────────────────────────────────────────
-
+ 
   SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 130,
@@ -251,7 +240,17 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       actions: [
-        // Ícone do carrinho com badge
+        // ── Histórico de pedidos ─────────────────────────────────────────
+        IconButton(
+          icon: const Icon(Icons.receipt_long_rounded, color: Colors.white),
+          tooltip: 'Meus pedidos',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OrdersHistoryPage()),
+          ),
+        ),
+ 
+        // ── Carrinho com badge ───────────────────────────────────────────
         Stack(
           children: [
             IconButton(
@@ -292,6 +291,8 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+ 
+        // ── Logout ───────────────────────────────────────────────────────
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white),
           onPressed: _logout,
@@ -308,7 +309,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
+ 
   Widget _buildAIButton(BuildContext context) {
     return Material(
       color: Colors.white,
@@ -352,9 +353,7 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // ── Bottom bar do carrinho ─────────────────────────────────────────────────
-
+ 
   Widget _buildCartBottomBar(BuildContext context) {
     return Consumer<CartController>(
       builder: (_, cart, _) {
@@ -376,7 +375,6 @@ class _HomePageState extends State<HomePage> {
             ),
             child: Row(
               children: [
-                // Ícone sacola
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(

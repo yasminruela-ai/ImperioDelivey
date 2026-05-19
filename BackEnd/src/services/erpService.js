@@ -1,16 +1,13 @@
-const ERP_API_URL = process.env.ERP_API_URL;
-const ERP_API_KEY = process.env.ERP_API_KEY;
-
 function erpHeaders() {
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${ERP_API_KEY}`,
+    Authorization: `Bearer ${process.env.ERP_API_KEY}`,
   };
 }
 
 async function verificarErpOnline() {
   try {
-    const res = await fetch(`${ERP_API_URL}/integracao/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${process.env.ERP_API_URL}/integracao/health`, { signal: AbortSignal.timeout(3000) });
     return res.ok;
   } catch {
     return false;
@@ -19,7 +16,7 @@ async function verificarErpOnline() {
 
 async function enviarPedidoParaErp(deliveryPedidoId, itens) {
   try {
-    const res = await fetch(`${ERP_API_URL}/integracao/pedido`, {
+    const res = await fetch(`${process.env.ERP_API_URL}/integracao/pedido`, {
       method: "POST",
       headers: erpHeaders(),
       body: JSON.stringify({ deliveryPedidoId, itens }),
@@ -36,7 +33,7 @@ async function enviarPedidoParaErp(deliveryPedidoId, itens) {
 
 async function atualizarStatusNoErp(erpVendaId, status) {
   try {
-    const res = await fetch(`${ERP_API_URL}/integracao/pedido/${erpVendaId}/status`, {
+    const res = await fetch(`${process.env.ERP_API_URL}/integracao/pedido/${erpVendaId}/status`, {
       method: "PUT",
       headers: erpHeaders(),
       body: JSON.stringify({ status }),

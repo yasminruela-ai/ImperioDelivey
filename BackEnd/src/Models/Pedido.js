@@ -170,6 +170,15 @@ class Pedidos {
       return { validate: false, error: error.message };
     }
   }
+
+  async updateErpVendaId(id, erpVendaId) {
+    try {
+      await db.collection("pedidos").doc(id).update({ erpVendaId });
+      return { validate: true };
+    } catch (error) {
+      return { validate: false, error: error.message };
+    }
+  }
 }
 
 module.exports = new Pedidos();

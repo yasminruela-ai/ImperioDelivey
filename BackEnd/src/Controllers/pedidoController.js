@@ -2,6 +2,7 @@ const pedidos = require("../Models/Pedido");
 const carrinho = require("../Models/Carrinho");
 const users = require("../Models/User");
 const { sendOrderStatusNotification } = require("../notifications");
+const { enviarPedidoParaErp, atualizarStatusNoErp } = require("../services/erpService");
 
 class PedidoController {
 
@@ -45,6 +46,13 @@ class PedidoController {
 
       // limpa carrinho após finalizar
       await carrinho.clear(uid);
+
+      const erpResult = await enviarPedidoParaErp(result.data.id, itens);
+      if (erpResult.success) {
+        await pedidos.updateErpVendaId(result.data.id, erpResult.erpVendaId);
+      } else {
+        console.warn(`[Pedido ${result.data.id}] Falha ao registrar no ERP: ${erpResult.error}`);
+      }
 
       return res.status(201).json({
         success: true,
@@ -137,6 +145,14 @@ class PedidoController {
 
       const fcmToken = await users.getFcmToken(result.data.uidUsuario);
       await sendOrderStatusNotification(fcmToken, status, id);
+
+      const pedidoAtual = await pedidos.get(id);
+      if (pedidoAtual.validate && pedidoAtual.data.erpVendaId) {
+        const erpSync = await atualizarStatusNoErp(pedidoAtual.data.erpVendaId, status);
+        if (!erpSync.success) {
+          console.warn(`[Pedido ${id}] Status atualizado no Delivery, falhou no ERP: ${erpSync.error}`);
+        }
+      }
 
       return res.status(200).json({ success: true, data: { id } });
 

@@ -1,31 +1,39 @@
-function erpHeaders() {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${process.env.ERP_API_KEY}`,
-  };
-}
+const { createClient } = require("@supabase/supabase-js");
 
-async function verificarErpOnline() {
-  try {
-    const res = await fetch(`${process.env.ERP_API_URL}/integracao/health`, { signal: AbortSignal.timeout(3000) });
-    return res.ok;
-  } catch {
-    return false;
+let _supabase = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
   }
+  return _supabase;
 }
 
 async function enviarPedidoParaErp(deliveryPedidoId, itens) {
   try {
-    const res = await fetch(`${process.env.ERP_API_URL}/integracao/pedido`, {
-      method: "POST",
-      headers: erpHeaders(),
-      body: JSON.stringify({ deliveryPedidoId, itens }),
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      return { success: true, erpVendaId: data.erpVendaId };
-    }
-    return { success: false, error: data.message || `HTTP ${res.status}` };
+    const supabase = getSupabase();
+
+    const { data: venda, error: vendaError } = await supabase
+      .from("delivery_vendas")
+      .insert({ delivery_pedido_id: deliveryPedidoId, status: "pendente" })
+      .select("id")
+      .single();
+
+    if (vendaError) return { success: false, error: vendaError.message };
+
+    const itensRows = itens.map((item) => ({
+      venda_id: venda.id,
+      nome: item.nome || "",
+      quantidade: Number(item.quantidade) || 1,
+      preco_unitario: Number(item.valor) || 0,
+    }));
+
+    const { error: itensError } = await supabase
+      .from("delivery_itens")
+      .insert(itensRows);
+
+    if (itensError) return { success: false, error: itensError.message };
+
+    return { success: true, erpVendaId: venda.id };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -33,17 +41,18 @@ async function enviarPedidoParaErp(deliveryPedidoId, itens) {
 
 async function atualizarStatusNoErp(erpVendaId, status) {
   try {
-    const res = await fetch(`${process.env.ERP_API_URL}/integracao/pedido/${erpVendaId}/status`, {
-      method: "PUT",
-      headers: erpHeaders(),
-      body: JSON.stringify({ status }),
-    });
-    const data = await res.json();
-    if (res.ok && data.success) return { success: true };
-    return { success: false, error: data.message || `HTTP ${res.status}` };
+    const supabase = getSupabase();
+
+    const { error } = await supabase
+      .from("delivery_vendas")
+      .update({ status, atualizado_em: new Date().toISOString() })
+      .eq("id", erpVendaId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
-module.exports = { verificarErpOnline, enviarPedidoParaErp, atualizarStatusNoErp };
+module.exports = { enviarPedidoParaErp, atualizarStatusNoErp };

@@ -7,4 +7,4 @@
 // URL base do backend. Troque pelo IP da sua máquina quando testar em
 // dispositivo físico (ex: 'http://192.168.x.x:2580').
 // 10.0.2.2 é o alias do localhost para o emulador Android.
-const String kBaseUrl = 'http://10.0.2.2:3000';
+const String kBaseUrl = 'https://imp.vititraining.com.br';

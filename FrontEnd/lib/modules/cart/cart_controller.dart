@@ -112,6 +112,30 @@ class CartController extends ChangeNotifier {
         .catchError((_) {});
   }
 
+  void reorder(List<dynamic> itens) {
+    for (final item in itens) {
+      final product = ProductModel(
+        id: item['produtoId']?.toString() ?? '',
+        name: item['nome'] ?? '',
+        description: item['descricao'] ?? '',
+        price: (item['valor'] is num)
+            ? (item['valor'] as num).toDouble()
+            : double.tryParse(item['valor']?.toString() ?? '0') ?? 0,
+        image: item['imagem'] is String ? item['imagem'] : '',
+        categoria: item['categoria'] as String?,
+      );
+      final qty = (item['quantidade'] as num?)?.toInt() ?? 1;
+      final index = _items.indexWhere((i) => i.product.id == product.id);
+      if (index >= 0) {
+        _items[index].quantity += qty;
+      } else {
+        _items.add(CartItem(product: product, quantity: qty));
+      }
+    }
+    notifyListeners();
+    _persistAndSync();
+  }
+
   /// Força sincronização imediata do carrinho com o backend.
   Future<void> syncToBackend() => _syncBackend();
 

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 import '../../core/constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../modules/cart/cart_controller.dart';
 
 class OrdersHistoryPage extends StatefulWidget {
   const OrdersHistoryPage({super.key});
@@ -450,6 +452,48 @@ class _PedidoCard extends StatelessWidget {
                       ],
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppTheme.divider),
+                const SizedBox(height: 10),
+
+                // ── Refazer pedido ─────────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final cart = Provider.of<CartController>(
+                          context,
+                          listen: false);
+                      cart.reorder(itens);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${itens.length} ${itens.length == 1 ? 'item adicionado' : 'itens adicionados'} ao carrinho',
+                          ),
+                          backgroundColor: AppTheme.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          action: SnackBarAction(
+                            label: 'Ver carrinho',
+                            textColor: Colors.white,
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.replay_rounded, size: 16),
+                    label: const Text('Refazer pedido'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

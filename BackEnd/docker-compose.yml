@@ -1,0 +1,11 @@
+services:
+  imperio-api:
+    build: .
+    container_name: imperio-api
+    ports:
+      - "127.0.0.1:3002:3002"
+    env_file:
+      - .env
+    volumes:
+      - ./src/config/firebase-key.json:/app/src/config/firebase-key.json:ro
+    restart: unless-stopped
